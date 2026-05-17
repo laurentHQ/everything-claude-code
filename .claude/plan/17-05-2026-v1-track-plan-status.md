@@ -14,7 +14,7 @@
 | 1 | T2-rest then T3b-rest *(sequential within wave)* | **done** | `081ffd6a` |
 | 2 | T6 — Security Defaults & Policy Gates | **done** | `ef5c23b6` |
 | 3 | T7 — Promotion Lifecycle & CI Gating | **done** | `f8066f7e` |
-| 4 | T8 — Operator UX & Docs | **done** | (pending) |
+| 4 | T8 — Operator UX & Docs | **done** | `bf46bff6` |
 
 ## Locked decisions (from plan-review)
 
