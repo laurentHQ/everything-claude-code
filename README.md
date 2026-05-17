@@ -200,6 +200,28 @@ See the full changelog in [Releases](https://github.com/affaan-m/everything-clau
 
 ---
 
+## Safe first run
+
+ECC installs profile-based bundles into Claude / Codex / OpenCode home directories.
+Always plan before you apply:
+
+```
+# Inspect what would be installed (no writes)
+node scripts/install-plan.js --profile minimal --target claude --json
+
+# Apply when the plan is clean
+node scripts/install-apply.js --profile minimal --target claude --scope sandbox
+```
+
+Profile-level safety settings (e.g., `allow_mcp:false`, `block_global_install:true`,
+`hook_profile:"validation"`) are enforced at plan time. If a setting would refuse
+the install, the planner emits a `conflicts[]` entry with `severity:"error"` and
+`ecc install` will exit non-zero. See [`docs/PROFILE-SAFETY-GUIDE.md`](docs/PROFILE-SAFETY-GUIDE.md)
+for the operator walkthrough and [`docs/PROFILE-LIMITATIONS.md`](docs/PROFILE-LIMITATIONS.md)
+for the canonical enforcement map.
+
+---
+
 ## Quick Start
 
 Get up and running in under 2 minutes:

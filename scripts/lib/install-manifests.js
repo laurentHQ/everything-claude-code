@@ -603,6 +603,7 @@ function resolveInstallPlan(options = {}) {
     profileId,
     profileSettings,
     target,
+    scope: options.scope || (profileSettings && profileSettings.scope) || null,
     requestedModuleIds: effectiveRequestedIds,
     explicitModuleIds,
     includedComponentIds,

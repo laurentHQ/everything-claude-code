@@ -14,10 +14,13 @@ function normalizeSkillComponentIds(rawValue) {
   ));
 }
 
+const SUPPORTED_INSTALL_SCOPES = ['project', 'user', 'sandbox'];
+
 function parseInstallArgs(argv) {
   const args = argv.slice(2);
   const parsed = {
     target: null,
+    scope: null,
     dryRun: false,
     json: false,
     help: false,
@@ -34,6 +37,13 @@ function parseInstallArgs(argv) {
 
     if (arg === '--target') {
       parsed.target = args[index + 1] || null;
+      index += 1;
+    } else if (arg === '--scope') {
+      const value = args[index + 1] || null;
+      if (value !== null && !SUPPORTED_INSTALL_SCOPES.includes(value)) {
+        throw new Error(`Unsupported scope: ${value}. Expected one of: ${SUPPORTED_INSTALL_SCOPES.join(', ')}`);
+      }
+      parsed.scope = value;
       index += 1;
     } else if (arg === '--config') {
       parsed.configPath = args[index + 1] || null;
@@ -97,6 +107,10 @@ function normalizeInstallRequest(options = {}) {
     ...(Array.isArray(options.languages) ? options.languages : []),
   ]).map(language => language.toLowerCase()));
   const target = options.target || config?.target || 'claude';
+  const scope = options.scope || config?.scope || null;
+  if (scope !== null && !SUPPORTED_INSTALL_SCOPES.includes(scope)) {
+    throw new Error(`Unsupported scope: ${scope}. Expected one of: ${SUPPORTED_INSTALL_SCOPES.join(', ')}`);
+  }
   const hasManifestBaseSelection = Boolean(profileId) || moduleIds.length > 0 || includeComponentIds.length > 0;
   const usingManifestMode = hasManifestBaseSelection || excludeComponentIds.length > 0;
 
@@ -113,6 +127,7 @@ function normalizeInstallRequest(options = {}) {
   return {
     mode: usingManifestMode ? 'manifest' : 'legacy-compat',
     target,
+    scope,
     profileId,
     moduleIds,
     includeComponentIds,
@@ -124,6 +139,7 @@ function normalizeInstallRequest(options = {}) {
 
 module.exports = {
   LEGACY_INSTALL_TARGETS,
+  SUPPORTED_INSTALL_SCOPES,
   normalizeInstallRequest,
   parseInstallArgs,
 };

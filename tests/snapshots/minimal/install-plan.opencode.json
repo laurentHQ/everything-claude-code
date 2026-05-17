@@ -1,0 +1,256 @@
+{
+  "tool": "ecc",
+  "version": null,
+  "profileId": "minimal",
+  "target": "opencode",
+  "scope": null,
+  "modules": [
+    "commands-core",
+    "platform-configs",
+    "workflow-quality"
+  ],
+  "operations": [
+    {
+      "kind": "copy-path",
+      "moduleId": "commands-core",
+      "sourceRelativePath": "commands",
+      "destinationPath": "<HOME>/.opencode/commands",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": ".opencode",
+      "destinationPath": "<HOME>/.opencode",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": "mcp-configs",
+      "destinationPath": "<HOME>/.opencode/mcp-configs",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": "scripts/auto-update.js",
+      "destinationPath": "<HOME>/.opencode/scripts/auto-update.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": "scripts/setup-package-manager.js",
+      "destinationPath": "<HOME>/.opencode/scripts/setup-package-manager.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/agent-introspection-debugging",
+      "destinationPath": "<HOME>/.opencode/skills/agent-introspection-debugging",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/agent-sort",
+      "destinationPath": "<HOME>/.opencode/skills/agent-sort",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/ai-regression-testing",
+      "destinationPath": "<HOME>/.opencode/skills/ai-regression-testing",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/code-tour",
+      "destinationPath": "<HOME>/.opencode/skills/code-tour",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/configure-ecc",
+      "destinationPath": "<HOME>/.opencode/skills/configure-ecc",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/continuous-learning",
+      "destinationPath": "<HOME>/.opencode/skills/continuous-learning",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/continuous-learning-v2",
+      "destinationPath": "<HOME>/.opencode/skills/continuous-learning-v2",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/council",
+      "destinationPath": "<HOME>/.opencode/skills/council",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/e2e-testing",
+      "destinationPath": "<HOME>/.opencode/skills/e2e-testing",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/error-handling",
+      "destinationPath": "<HOME>/.opencode/skills/error-handling",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/eval-harness",
+      "destinationPath": "<HOME>/.opencode/skills/eval-harness",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/hookify-rules",
+      "destinationPath": "<HOME>/.opencode/skills/hookify-rules",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/iterative-retrieval",
+      "destinationPath": "<HOME>/.opencode/skills/iterative-retrieval",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/plankton-code-quality",
+      "destinationPath": "<HOME>/.opencode/skills/plankton-code-quality",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/production-audit",
+      "destinationPath": "<HOME>/.opencode/skills/production-audit",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/skill-scout",
+      "destinationPath": "<HOME>/.opencode/skills/skill-scout",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/skill-stocktake",
+      "destinationPath": "<HOME>/.opencode/skills/skill-stocktake",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/strategic-compact",
+      "destinationPath": "<HOME>/.opencode/skills/strategic-compact",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/tdd-workflow",
+      "destinationPath": "<HOME>/.opencode/skills/tdd-workflow",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/verification-loop",
+      "destinationPath": "<HOME>/.opencode/skills/verification-loop",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/windows-desktop-e2e",
+      "destinationPath": "<HOME>/.opencode/skills/windows-desktop-e2e",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    }
+  ],
+  "conflicts": [],
+  "warnings": [],
+  "safety": {
+    "dryRunRequired": true,
+    "globalInstallAllowed": true,
+    "mcpAllowed": false,
+    "allDestinationsInsideAllowedRoots": true
+  }
+}

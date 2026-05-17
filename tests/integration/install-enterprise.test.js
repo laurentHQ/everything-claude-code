@@ -21,6 +21,7 @@ const { getInstallTargetAdapter } = require('../../scripts/lib/install-targets/r
 
 const REPO_ROOT = path.join(__dirname, '../..');
 const SCHEMA_PATH = path.join(REPO_ROOT, 'schemas', 'install-plan.schema.json');
+const OPERATIONS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas', 'install-operations.schema.json');
 
 function test(name, fn) {
   try {
@@ -91,7 +92,9 @@ function runTests() {
     try {
       const plan = buildEnterprisePlan(tmp);
       const schema = JSON.parse(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+      const opsSchema = JSON.parse(fs.readFileSync(OPERATIONS_SCHEMA_PATH, 'utf8'));
       const ajv = new Ajv({ allErrors: true });
+      ajv.addSchema(opsSchema);
       const validate = ajv.compile(schema);
       const valid = validate(plan);
       assert.ok(

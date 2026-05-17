@@ -128,13 +128,49 @@ function createStatePreview(options) {
 }
 
 function applyInstallPlan(plan) {
+  // T6 self-enforcing gate. Two independent things to assert before the
+  // install proceeds; both must pass:
+  //   (a) Fresh policy evaluation against profileSettings + selectedModules
+  //       (manifest-mode plans only — legacy plans predate profile settings
+  //       and have no settings to evaluate, so policy is a no-op for them).
+  //   (b) Any conflicts already attached to the plan by an upstream caller
+  //       (e.g., path-safety warnings, future external attachers) are
+  //       re-asserted as defense-in-depth.
+  //
+  // The two checks are independent. An earlier version of this code used
+  // an if/else-if that allowed warning-only pre-attached conflicts to
+  // bypass the fresh policy evaluation; the merged-list pattern below
+  // closes that gap by combining both sources before a single assertion.
+  if (!plan) {
+    const { applyInstallPlan: applyPlan } = require('./install/apply');
+    return applyPlan(plan);
+  }
+
+  const { evaluatePolicy, assertNoBlockingConflicts } = require('./install/policy');
+
+  const policyConflicts = (plan.profileSettings || (Array.isArray(plan.selectedModules) && plan.selectedModules.length > 0))
+    ? evaluatePolicy(
+      {
+        selectedModules: plan.selectedModules || [],
+        includedComponentIds: plan.includedComponentIds || [],
+        scope: plan.scope || null,
+      },
+      plan.profileSettings || null
+    ).conflicts
+    : [];
+  const attachedConflicts = Array.isArray(plan.conflicts) ? plan.conflicts : [];
+  const allConflicts = [...attachedConflicts, ...policyConflicts];
+  if (allConflicts.length > 0) {
+    assertNoBlockingConflicts({ conflicts: allConflicts });
+  }
+
   const { applyInstallPlan: applyPlan } = require('./install/apply');
   return applyPlan(plan);
 }
 
-function buildCopyFileOperation({ moduleId, sourcePath, sourceRelativePath, destinationPath, strategy }) {
+function buildCopyFileOperation({ moduleId, sourcePath, sourceRelativePath, destinationPath, strategy, kind }) {
   return {
-    kind: 'copy-file',
+    kind: kind || 'copy-file',
     moduleId,
     sourcePath,
     sourceRelativePath,
@@ -169,6 +205,7 @@ function addRecursiveCopyOperations(operations, options) {
       sourceRelativePath,
       destinationPath,
       strategy: options.strategy || 'preserve-relative-path',
+      kind: 'copy-tree',
     }));
   }
 
@@ -252,6 +289,7 @@ function addMatchingRuleOperations(operations, options) {
       sourceRelativePath,
       destinationPath,
       strategy: options.strategy || 'flatten-copy',
+      kind: 'flatten-copy',
     }));
   }
 
@@ -664,6 +702,7 @@ function createManifestInstallPlan(options = {}) {
     includeComponentIds: options.includeComponentIds || [],
     excludeComponentIds: options.excludeComponentIds || [],
     target,
+    scope: options.scope || null,
   });
   const adapter = getInstallTargetAdapter(target);
   const operations = plan.operations.flatMap(operation => materializeScaffoldOperation(sourceRoot, operation));
@@ -717,6 +756,10 @@ function createManifestInstallPlan(options = {}) {
     excludedModuleIds: plan.excludedModuleIds,
     operations,
     statePreview,
+    // T6: expose the resolved-request fields the policy gate consumes.
+    selectedModules: plan.selectedModules,
+    profileSettings: plan.profileSettings,
+    scope: plan.scope || null,
   };
 }
 

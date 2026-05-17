@@ -17,6 +17,7 @@ const Ajv = require('ajv');
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-plan.schema.json');
+const OPERATIONS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-operations.schema.json');
 
 const {
   sortOperations,
@@ -30,6 +31,7 @@ function readJson(filePath) {
 
 function buildValidator() {
   const ajv = new Ajv({ allErrors: true });
+  ajv.addSchema(readJson(OPERATIONS_SCHEMA_PATH));
   return ajv.compile(readJson(SCHEMA_PATH));
 }
 

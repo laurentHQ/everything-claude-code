@@ -83,7 +83,8 @@
       "dependencies": [],
       "defaultInstall": true,
       "cost": "medium",
-      "stability": "stable"
+      "stability": "stable",
+      "riskLevel": "safe"
     },
     {
       "id": "platform-configs",

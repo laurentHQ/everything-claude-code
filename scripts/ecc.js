@@ -73,6 +73,10 @@ const COMMANDS = {
     script: 'uninstall.js',
     description: 'Remove ECC-managed files recorded in install-state',
   },
+  promote: {
+    script: 'ecc-promote.js',
+    description: 'Transition a profile lifecycle (draft -> candidate -> promoted) via in-place manifest edit',
+  },
 };
 
 const PRIMARY_COMMANDS = [
@@ -92,6 +96,7 @@ const PRIMARY_COMMANDS = [
   'session-inspect',
   'loop-status',
   'uninstall',
+  'promote',
 ];
 
 function showHelp(exitCode = 0) {

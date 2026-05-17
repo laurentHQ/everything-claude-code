@@ -18,6 +18,11 @@ const repoRoot = path.join(__dirname, '..', '..');
 const modulesSchemaPath = path.join(repoRoot, 'schemas', 'install-modules.schema.json');
 const profilesSchemaPath = path.join(repoRoot, 'schemas', 'install-profiles.schema.json');
 const componentsSchemaPath = path.join(repoRoot, 'schemas', 'install-components.schema.json');
+// Wave 0 (I10): install-profiles now $refs install-settings, and install-state/
+// install-plan $ref install-operations. Tests must override these paths so the
+// validator wrapper (which rewrites REPO_ROOT to a temp dir) can resolve them.
+const settingsSchemaPath = path.join(repoRoot, 'schemas', 'install-settings.schema.json');
+const operationsSchemaPath = path.join(repoRoot, 'schemas', 'install-operations.schema.json');
 
 // Test helpers
 function test(name, fn) {
@@ -2808,7 +2813,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(manifestsDir, 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on invalid JSON');
     assert.ok(result.stderr.includes('Invalid JSON'), 'Should report invalid JSON');
@@ -2877,7 +2884,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail when a referenced path is missing');
     assert.ok(result.stderr.includes('references missing path'), 'Should report missing path');
@@ -2946,7 +2955,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on duplicate claimed paths');
     assert.ok(result.stderr.includes('claimed by both'), 'Should report duplicate path claims');
@@ -2998,7 +3009,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on unknown profile module');
     assert.ok(result.stderr.includes('references unknown module ghost-module'),
@@ -3071,7 +3084,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 0, `Should pass valid fixture, got stderr: ${result.stderr}`);
     assert.ok(result.stdout.includes('Validated 2 install modules, 2 install components, and 6 profiles'),
@@ -3124,11 +3139,105 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on unknown component module');
     assert.ok(result.stderr.includes('references unknown module ghost-module'),
       'Should report unknown component module');
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  // ==========================================
+  // T7: runProfilePromotionGateCheck
+  // ==========================================
+  console.log('\nrunProfilePromotionGateCheck (T7):');
+
+  const {
+    runProfilePromotionGateCheck,
+  } = require(path.join(repoRoot, 'scripts', 'ci', 'validate-install-manifests.js'));
+
+  if (test('returns no errors when no profile is promoted (gate skipped)', () => {
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'draft' } },
+        core: { settings: { lifecycle: 'candidate' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, {
+      gatesReportPath: '/nonexistent/path/gates-report.json',
+    });
+    assert.deepStrictEqual(errors, []);
+  })) passed++; else failed++;
+
+  if (test('emits error for promoted profile when gates-report.json is missing', () => {
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'promoted' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, {
+      gatesReportPath: '/definitely/does/not/exist/gates-report.json',
+    });
+    assert.strictEqual(errors.length, 1, `expected 1 error, got ${errors.length}: ${errors.join(', ')}`);
+    assert.ok(errors[0].includes('Profile minimal'));
+    assert.ok(errors[0].includes('lifecycle:"promoted"'));
+    assert.ok(errors[0].includes('gates-report.json'));
+  })) passed++; else failed++;
+
+  if (test('returns no errors when gates-report.json passes', () => {
+    const testDir = createTestDir();
+    const reportPath = path.join(testDir, 'gates-report.json');
+    writeJson(reportPath, {
+      generatedAt: new Date().toISOString(),
+      gates: [
+        { gate: 'schema', status: 'pass' },
+        { gate: 'snapshot', status: 'pass' },
+        { gate: 'policy', status: 'pass' },
+        { gate: 'secret-scan', status: 'pass' },
+        { gate: 'round-trip', status: 'pass' },
+      ],
+      passed: true,
+    });
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'promoted' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, { gatesReportPath: reportPath });
+    assert.deepStrictEqual(errors, []);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('emits errors with failing gate names when gates-report.json fails', () => {
+    const testDir = createTestDir();
+    const reportPath = path.join(testDir, 'gates-report.json');
+    writeJson(reportPath, {
+      generatedAt: new Date().toISOString(),
+      gates: [
+        { gate: 'schema', status: 'pass' },
+        { gate: 'snapshot', status: 'fail', detail: 'mismatch' },
+        { gate: 'policy', status: 'pass' },
+        { gate: 'secret-scan', status: 'fail', detail: 'shape detected' },
+        { gate: 'round-trip', status: 'pass' },
+      ],
+      passed: false,
+    });
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'promoted' } },
+        core: { settings: { lifecycle: 'promoted' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, { gatesReportPath: reportPath });
+    assert.strictEqual(errors.length, 2, `expected 2 errors, got ${errors.length}`);
+    for (const err of errors) {
+      assert.ok(err.includes('failing gates'),
+        `expected error to mention failing gates: ${err}`);
+      assert.ok(err.includes('snapshot') && err.includes('secret-scan'),
+        `expected failing gate names listed: ${err}`);
+    }
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 

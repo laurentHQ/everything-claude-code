@@ -792,11 +792,74 @@ function runTests() {
     assert.ok(roots.includes(targetRoot), `allowedRoots should include ${targetRoot}, got: ${roots.join(', ')}`);
   })) passed++; else failed++;
 
-  if (test('opencode adapter allowedRoots returns [] (opt-in default unchanged, MVP defers opencode)', () => {
+  if (test('opencode adapter allowedRoots(apply) returns array including targetRoot', () => {
     const adapter = getInstallTargetAdapter('opencode');
-    const roots = adapter.allowedRoots('apply', { targetRoot: '/tmp/x/.opencode' });
+    const targetRoot = path.join('/tmp', 'x', '.opencode');
+    const roots = adapter.allowedRoots('apply', { targetRoot });
+    assert.ok(Array.isArray(roots), 'allowedRoots should return an array');
+    assert.ok(roots.includes(targetRoot), `allowedRoots should include ${targetRoot}, got: ${roots.join(', ')}`);
+  })) passed++; else failed++;
+
+  if (test('opencode adapter allowedRoots(sandbox) without targetRoot falls back to resolved sandbox root', () => {
+    const adapter = getInstallTargetAdapter('opencode');
+    const roots = adapter.allowedRoots('sandbox', {});
+    const expectedSandboxRoot = path.resolve('./sandbox/home/.opencode');
     assert.ok(Array.isArray(roots));
-    assert.strictEqual(roots.length, 0, `Expected empty allowedRoots for opencode, got: ${roots.join(', ')}`);
+    assert.ok(
+      roots.includes(expectedSandboxRoot),
+      `allowedRoots should include resolved sandbox root ${expectedSandboxRoot}, got: ${roots.join(', ')}`
+    );
+  })) passed++; else failed++;
+
+  if (test('opencode adapter allowedRoots(user) without targetRoot includes home .opencode', () => {
+    const os = require('os');
+    const adapter = getInstallTargetAdapter('opencode');
+    const roots = adapter.allowedRoots('user', {});
+    const expectedUserRoot = path.join(os.homedir(), '.opencode');
+    assert.ok(Array.isArray(roots));
+    assert.ok(
+      roots.includes(expectedUserRoot),
+      `allowedRoots should include user home root ${expectedUserRoot}, got: ${roots.join(', ')}`
+    );
+  })) passed++; else failed++;
+
+  if (test('round-trip: createManifestInstallPlan opencode operations stay under computed allowed root', () => {
+    const fs = require('fs');
+    const os = require('os');
+    const { createManifestInstallPlan } = require('../../scripts/lib/install-executor');
+
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-allowed-roots-opencode-'));
+    try {
+      const plan = createManifestInstallPlan({
+        target: 'opencode',
+        profileId: 'minimal',
+        homeDir,
+      });
+
+      const adapter = getInstallTargetAdapter('opencode');
+      const roots = adapter.allowedRoots('apply', {
+        homeDir,
+        projectRoot: plan.projectRoot,
+        repoRoot: plan.repoRoot,
+        targetRoot: plan.targetRoot,
+      });
+
+      const expectedRoot = path.join(homeDir, '.opencode');
+      assert.ok(
+        roots.includes(expectedRoot),
+        `Expected allowedRoots to include ${expectedRoot}, got: ${roots.join(', ')}`
+      );
+
+      assert.ok(plan.operations.length > 0, 'Plan should contain at least one operation');
+      for (const operation of plan.operations) {
+        assert.ok(
+          operation.destinationPath.startsWith(expectedRoot),
+          `Operation destinationPath ${operation.destinationPath} is not under ${expectedRoot}`
+        );
+      }
+    } finally {
+      try { require('fs').rmSync(homeDir, { recursive: true, force: true }); } catch (_) { /* ignore */ }
+    }
   })) passed++; else failed++;
 
   if (test('round-trip: createManifestInstallPlan claude operations stay under computed allowed root', () => {

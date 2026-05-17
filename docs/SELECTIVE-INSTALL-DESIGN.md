@@ -487,3 +487,12 @@ It should be:
 
 That is the shortest path from the current ECC codebase to a real selective
 install experience that feels like ECC 2.0 instead of a large legacy installer.
+
+## Update: Profile Safety (v1)
+
+Profile-level safety settings (`allow_mcp`, `block_global_install`, `hook_profile`,
+`require_audit_log`, `lifecycle`) introduced in MVP are now enforced at plan time
+via `scripts/lib/install/policy.js`. The MVP shipped declarative-only settings;
+v1 closes the gap with the policy module, the 5-gate promotion orchestrator
+(`scripts/ci/gate-profile-promotion.js`), and the secret-shape scanner
+(`scripts/ci/scan-secret-shapes.js`). See `docs/PROFILE-SAFETY-GUIDE.md`.

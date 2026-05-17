@@ -1,6 +1,49 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+const Ajv = require('ajv');
+
 const { isInsideAllowedRoot } = require('./path-safety');
+const { evaluatePolicy } = require('./policy');
+
+const SCHEMA_DIR = path.join(__dirname, '..', '..', '..', 'schemas');
+const PLAN_SCHEMA_PATH = path.join(SCHEMA_DIR, 'install-plan.schema.json');
+const OPERATIONS_SCHEMA_PATH = path.join(SCHEMA_DIR, 'install-operations.schema.json');
+
+let cachedPlanValidator = null;
+
+function readJsonSchema(filePath, label) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    throw new Error(`Failed to load ${label} (${filePath}): ${error.message}`);
+  }
+}
+
+function getPlanValidator() {
+  if (cachedPlanValidator) return cachedPlanValidator;
+  const ajv = new Ajv({ allErrors: true });
+  ajv.addSchema(readJsonSchema(OPERATIONS_SCHEMA_PATH, 'install-operations schema'));
+  cachedPlanValidator = ajv.compile(readJsonSchema(PLAN_SCHEMA_PATH, 'install-plan schema'));
+  return cachedPlanValidator;
+}
+
+function formatAjvErrors(errors) {
+  if (!Array.isArray(errors) || errors.length === 0) return '(no errors)';
+  return errors
+    .map(err => `${err.instancePath || '/'} ${err.message}${err.params ? ` ${JSON.stringify(err.params)}` : ''}`)
+    .join('; ');
+}
+
+function assertPlanDocumentValid(doc) {
+  const validate = getPlanValidator();
+  if (!validate(doc)) {
+    throw new Error(
+      `buildPlanDocument: produced document does not match schemas/install-plan.schema.json: ${formatAjvErrors(validate.errors)}`
+    );
+  }
+}
 
 /**
  * Sort an operations array deterministically by (moduleId ASC, destinationPath ASC).
@@ -78,6 +121,11 @@ function buildPlanDocument(resolvedRequest, adapter, options = {}) {
     }
   }
 
+  // T6: evaluate policy gates and merge their conflicts/warnings.
+  const policyResult = evaluatePolicy(resolvedRequest, profileSettings);
+  conflicts.push(...policyResult.conflicts);
+  const policyWarnings = Array.isArray(policyResult.warnings) ? policyResult.warnings : [];
+
   // Conflict-sort
   conflicts.sort((a, b) => {
     const ka = `${a.destination} ${a.reason}`;
@@ -95,7 +143,7 @@ function buildPlanDocument(resolvedRequest, adapter, options = {}) {
       (Array.isArray(allowedRoots) && allowedRoots.length === 0) ? true : allInsideRoots,
   };
 
-  return {
+  const doc = {
     tool: 'ecc',
     version: options.repoVersion || null,
     profileId: resolvedRequest ? (resolvedRequest.profileId || null) : null,
@@ -106,9 +154,20 @@ function buildPlanDocument(resolvedRequest, adapter, options = {}) {
       : [],
     operations: sortedOps,
     conflicts,
-    warnings: [],
+    warnings: policyWarnings.slice(),
     safety,
   };
+
+  // I3: enforce schema conformance at runtime — guarantees CLI output, snapshot
+  // tests, and downstream consumers see only schema-valid plan documents.
+  assertPlanDocumentValid(doc);
+
+  return doc;
 }
 
-module.exports = { sortOperations, buildOperations, buildPlanDocument };
+module.exports = {
+  sortOperations,
+  buildOperations,
+  buildPlanDocument,
+  assertPlanDocumentValid,
+};

@@ -46,9 +46,16 @@ Options:
   --without <component>
                       Exclude a user-facing install component
   --config <path>     Load install intent from ecc-install.json
+  --scope <scope>     Install scope: project | user | sandbox
+                      (consumed by policy gates; profiles with
+                      block_global_install:true refuse --scope user)
   --dry-run    Show the install plan without copying files
   --json       Emit machine-readable plan/result JSON
   --help       Show this help text
+
+Exit codes:
+  0  install completed (or dry-run printed)
+  1  install refused or runtime error (e.g., policy conflict, schema invalid, IO error)
 
 Available languages:
 ${languages.map(language => `  - ${language}`).join('\n')}
@@ -118,6 +125,7 @@ function main() {
     } = require('./lib/install/config');
     const { applyInstallPlan } = require('./lib/install-executor');
     const { createInstallPlanFromRequest } = require('./lib/install/runtime');
+    const { evaluatePolicy, assertNoBlockingConflicts } = require('./lib/install/policy');
     const defaultConfigPath = options.configPath || options.languages.length > 0
       ? null
       : findDefaultInstallConfigPath({ cwd: process.cwd() });
@@ -142,6 +150,23 @@ function main() {
       }
       return;
     }
+
+    // T6: evaluate policy gates against the resolved request and refuse
+    // the install on any severity:"error" conflict. This is the CLI-side
+    // gate (operator-facing — emits [policy] stderr lines before throwing).
+    // install-executor.applyInstallPlan ALSO runs evaluatePolicy from
+    // scratch on every call, so programmatic callers that bypass this CLI
+    // are still gated. The duplicate evaluation is intentional: missing
+    // enforcement is far costlier than evaluating policy twice.
+    const policyResult = evaluatePolicy(
+      {
+        selectedModules: plan.selectedModules || [],
+        includedComponentIds: plan.includedComponentIds || [],
+        scope: options.scope || null,
+      },
+      plan.profileSettings || null
+    );
+    assertNoBlockingConflicts(policyResult);
 
     const result = applyInstallPlan(plan);
     if (options.json) {

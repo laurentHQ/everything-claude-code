@@ -95,6 +95,7 @@ function writeCursorState(projectRoot, overrides = {}) {
   };
 }
 
+
 function managedOperation(kind, destinationPath, overrides = {}) {
   return {
     kind,
@@ -325,7 +326,6 @@ function runTests() {
             sourceRelativePath: 'missing/source.md',
             strategy: 'copy-file',
           }),
-          managedOperation('mkdir', customDestination),
         ],
       }));
 
@@ -342,7 +342,11 @@ function runTests() {
       assert.ok(codes.includes('target-root-mismatch'));
       assert.ok(codes.includes('install-state-path-mismatch'));
       assert.ok(codes.includes('missing-source-files'));
-      assert.ok(codes.includes('unverified-managed-operations'));
+      // V1 Wave 1 / T2-rest: 'unverified-managed-operations' is no longer
+      // reachable through a schema-valid install-state (all enum kinds
+      // now have inspector branches). The original assertion has been
+      // removed; the code path is exercised in unit tests that call
+      // inspectManagedOperation directly.
       assert.ok(codes.includes('manifest-version-mismatch'));
       assert.ok(codes.includes('repo-version-mismatch'));
       assert.ok(codes.includes('resolution-unavailable'));
@@ -437,9 +441,14 @@ function runTests() {
       });
       const codes = report.results[0].issues.map(issue => issue.code);
 
-      assert.strictEqual(report.results[0].status, 'warning');
+      // Wave 0 (I5): malformed JSON destinations are now classified as
+      // parse-error (severity: error) rather than drifted (severity:
+      // warning), because automatic repair would overwrite unreadable
+      // user data. Status therefore bumps to 'error'.
+      assert.strictEqual(report.results[0].status, 'error');
       assert.ok(codes.includes('unverified-managed-operations'));
-      assert.ok(codes.includes('drifted-managed-files'));
+      assert.ok(codes.includes('parse-error-managed-files'),
+        `expected parse-error-managed-files issue, got: ${codes.join(', ')}`);
       assert.ok(!report.results[0].issues.some(issue => issue.code === 'missing-managed-files'));
     } finally {
       cleanup(homeDir);
@@ -638,20 +647,11 @@ function runTests() {
       assert.strictEqual(result.results[0].status, 'error');
       assert.ok(result.results[0].error.includes('Missing source file(s)'));
 
-      const unsupportedDestination = path.join(unsupportedProjectRoot, '.cursor', 'custom.txt');
-      writeCursorState(unsupportedProjectRoot, {
-        operations: [
-          managedOperation('mkdir', unsupportedDestination),
-        ],
-      });
-      result = repairInstalledStates({
-        repoRoot: REPO_ROOT,
-        homeDir,
-        projectRoot: unsupportedProjectRoot,
-        targets: ['cursor'],
-      });
-      assert.strictEqual(result.results[0].status, 'error');
-      assert.ok(result.results[0].error.includes('Unsupported repair operation kind'));
+      // V1 Wave 1 / T2-rest: every kind in the install-operations enum now
+      // has a repair-dispatch branch, so the "Unsupported repair operation
+      // kind" error is no longer reachable through a schema-valid state.
+      // The previous mkdir-as-unsupported-marker assertion has been removed;
+      // the dispatch's defensive throw is exercised by direct unit tests.
 
       writeCursorState(okProjectRoot, { operations: [] });
       result = repairInstalledStates({
@@ -1553,32 +1553,19 @@ function runTests() {
     }
   })) passed++; else failed++;
 
-  if (test('uninstall reports unsupported operations and missing merge payloads as errors', () => {
+  if (test('uninstall reports missing merge payloads as errors', () => {
+    // V1 Wave 1 / T2-rest: previously this test also covered the
+    // "Unsupported uninstall operation kind" branch using `mkdir` as a
+    // sentinel kind. With all enum kinds now first-class, that branch is
+    // only reachable from outside the schema-guarded API surface and is
+    // unit-tested directly elsewhere. Only the missing-merge-payload case
+    // remains here.
     const homeDir = createTempDir('install-lifecycle-home-');
-    const unsupportedProjectRoot = createTempDir('install-lifecycle-unsupported-');
     const missingPayloadProjectRoot = createTempDir('install-lifecycle-missing-payload-');
 
     try {
-      let targetRoot = path.join(unsupportedProjectRoot, '.cursor');
-      let destinationPath = path.join(targetRoot, 'custom.txt');
-      fs.mkdirSync(targetRoot, { recursive: true });
-      fs.writeFileSync(destinationPath, 'custom\n');
-      writeCursorState(unsupportedProjectRoot, {
-        operations: [
-          managedOperation('mkdir', destinationPath),
-        ],
-      });
-
-      let result = uninstallInstalledStates({
-        homeDir,
-        projectRoot: unsupportedProjectRoot,
-        targets: ['cursor'],
-      });
-      assert.strictEqual(result.results[0].status, 'error');
-      assert.ok(result.results[0].error.includes('Unsupported uninstall operation kind'));
-
-      targetRoot = path.join(missingPayloadProjectRoot, '.cursor');
-      destinationPath = path.join(targetRoot, 'settings.json');
+      const targetRoot = path.join(missingPayloadProjectRoot, '.cursor');
+      const destinationPath = path.join(targetRoot, 'settings.json');
       fs.mkdirSync(targetRoot, { recursive: true });
       fs.writeFileSync(destinationPath, '{"managed":true}\n');
       writeCursorState(missingPayloadProjectRoot, {
@@ -1587,7 +1574,7 @@ function runTests() {
         ],
       });
 
-      result = uninstallInstalledStates({
+      const result = uninstallInstalledStates({
         homeDir,
         projectRoot: missingPayloadProjectRoot,
         targets: ['cursor'],
@@ -1596,7 +1583,6 @@ function runTests() {
       assert.ok(result.results[0].error.includes('Missing merge payload for uninstall'));
     } finally {
       cleanup(homeDir);
-      cleanup(unsupportedProjectRoot);
       cleanup(missingPayloadProjectRoot);
     }
   })) passed++; else failed++;

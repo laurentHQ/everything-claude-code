@@ -47,48 +47,7 @@
               ]
             }
           },
-          "settings": {
-            "type": "object",
-            "properties": {
-              "scope": {
-                "type": "string",
-                "enum": ["project", "user", "sandbox"]
-              },
-              "hook_profile": {
-                "type": "string",
-                "enum": ["none", "standard", "strict", "validation"]
-              },
-              "allow_mcp": {
-                "type": "boolean"
-              },
-              "allowed_mcp_servers": {
-                "type": "array",
-                "default": [],
-                "items": {
-                  "type": "string",
-                  "pattern": "^[a-z0-9_-]+$"
-                }
-              },
-              "require_dry_run_first": {
-                "type": "boolean"
-              },
-              "require_audit_log": {
-                "type": "boolean"
-              },
-              "block_global_install": {
-                "type": "boolean"
-              },
-              "write_scope": {
-                "type": "string",
-                "enum": ["project-only", "project-local", "controlled"]
-              },
-              "lifecycle": {
-                "type": "string",
-                "enum": ["draft", "candidate", "promoted"]
-              }
-            },
-            "additionalProperties": false
-          }
+          "settings": { "$ref": "install-settings.schema.json" }
         },
         "required": [
           "description",

@@ -13,9 +13,13 @@ const REPO_ROOT = path.join(__dirname, '../..');
 const MODULES_MANIFEST_PATH = path.join(REPO_ROOT, 'manifests/install-modules.json');
 const PROFILES_MANIFEST_PATH = path.join(REPO_ROOT, 'manifests/install-profiles.json');
 const COMPONENTS_MANIFEST_PATH = path.join(REPO_ROOT, 'manifests/install-components.json');
+const GATES_REPORT_PATH = path.join(REPO_ROOT, 'gates-report.json');
 const MODULES_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-modules.schema.json');
 const PROFILES_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-profiles.schema.json');
 const COMPONENTS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-components.schema.json');
+// Shared sub-schemas: install-profiles.schema.json $refs install-settings.
+const SETTINGS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-settings.schema.json');
+const OPERATIONS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-operations.schema.json');
 const COMPONENT_FAMILY_PREFIXES = {
   baseline: 'baseline:',
   language: 'lang:',
@@ -96,6 +100,77 @@ function runProfileSettingsSemanticChecks(profilesData) {
   return errors;
 }
 
+/**
+ * T7: When any profile is at lifecycle:"promoted", require a passing
+ * gates-report.json (produced by scripts/ci/gate-profile-promotion.js).
+ * If no profile is promoted, this check is a no-op (the gates report is
+ * not required for draft/candidate-only states).
+ *
+ * options.gatesReportPath allows tests to point at a fixture file.
+ * Returns an array of error strings (empty on success).
+ */
+function runProfilePromotionGateCheck(profilesData, options = {}) {
+  const errors = [];
+  if (!profilesData || typeof profilesData !== 'object') {
+    return errors;
+  }
+  const profiles = profilesData.profiles && typeof profilesData.profiles === 'object'
+    ? profilesData.profiles
+    : {};
+
+  const promotedProfileIds = [];
+  for (const [profileId, profile] of Object.entries(profiles)) {
+    if (!profile || typeof profile !== 'object') continue;
+    const settings = profile.settings;
+    if (settings && typeof settings === 'object' && settings.lifecycle === 'promoted') {
+      promotedProfileIds.push(profileId);
+    }
+  }
+
+  if (promotedProfileIds.length === 0) {
+    return errors;
+  }
+
+  const reportPath = options.gatesReportPath || GATES_REPORT_PATH;
+  if (!fs.existsSync(reportPath)) {
+    for (const profileId of promotedProfileIds) {
+      errors.push(
+        `ERROR: Profile ${profileId}: lifecycle:"promoted" requires a passing gates-report.json (run scripts/ci/gate-profile-promotion.js first)`
+      );
+    }
+    return errors;
+  }
+
+  let report;
+  try {
+    report = readJson(reportPath, 'gates-report.json');
+  } catch (error) {
+    for (const profileId of promotedProfileIds) {
+      errors.push(
+        `ERROR: Profile ${profileId}: gates-report.json is unreadable (${error.message})`
+      );
+    }
+    return errors;
+  }
+
+  if (report && report.passed === true) {
+    return errors;
+  }
+
+  const failingGates = Array.isArray(report && report.gates)
+    ? report.gates.filter(g => g && g.status !== 'pass').map(g => g.gate)
+    : [];
+  const failingDetail = failingGates.length > 0
+    ? `failing gates: ${failingGates.join(', ')}`
+    : 'gates-report.json reports passed:false';
+  for (const profileId of promotedProfileIds) {
+    errors.push(
+      `ERROR: Profile ${profileId}: lifecycle:"promoted" requires a passing gates-report.json (${failingDetail})`
+    );
+  }
+  return errors;
+}
+
 function validateInstallManifests() {
   if (!fs.existsSync(MODULES_MANIFEST_PATH) || !fs.existsSync(PROFILES_MANIFEST_PATH)) {
     console.log('Install manifests not found, skipping validation');
@@ -119,6 +194,9 @@ function validateInstallManifests() {
   }
 
   const ajv = new Ajv({ allErrors: true });
+  // Pre-register shared sub-schemas so $ref resolution works for install-profiles.
+  ajv.addSchema(readJson(SETTINGS_SCHEMA_PATH, 'install-settings.schema.json'));
+  ajv.addSchema(readJson(OPERATIONS_SCHEMA_PATH, 'install-operations.schema.json'));
   hasErrors = validateSchema(ajv, MODULES_SCHEMA_PATH, modulesData, 'install-modules.json') || hasErrors;
   hasErrors = validateSchema(ajv, PROFILES_SCHEMA_PATH, profilesData, 'install-profiles.json') || hasErrors;
   if (fs.existsSync(COMPONENTS_MANIFEST_PATH)) {
@@ -133,6 +211,14 @@ function validateInstallManifests() {
     hasErrors = true;
   }
 
+  const promotionGateErrors = runProfilePromotionGateCheck(profilesData);
+  if (promotionGateErrors.length > 0) {
+    for (const message of promotionGateErrors) {
+      console.error(message);
+    }
+    hasErrors = true;
+  }
+
   if (hasErrors) {
     process.exit(1);
   }
@@ -140,6 +226,7 @@ function validateInstallManifests() {
   const modules = Array.isArray(modulesData.modules) ? modulesData.modules : [];
   const moduleIds = new Set();
   const claimedPaths = new Map();
+  const ALLOWED_HOOK_RISK_LEVELS = ['safe', 'medium', 'high'];
 
   for (const module of modules) {
     if (moduleIds.has(module.id)) {
@@ -147,6 +234,16 @@ function validateInstallManifests() {
       hasErrors = true;
     }
     moduleIds.add(module.id);
+
+    // T6: kind:hooks must declare riskLevel for policy gate evaluation.
+    if (module.kind === 'hooks') {
+      if (!ALLOWED_HOOK_RISK_LEVELS.includes(module.riskLevel)) {
+        console.error(
+          `ERROR: Module ${module.id}: kind:hooks requires riskLevel (one of ${ALLOWED_HOOK_RISK_LEVELS.join('/')})`
+        );
+        hasErrors = true;
+      }
+    }
 
     for (const dependency of module.dependencies) {
       if (!moduleIds.has(dependency) && !modules.some(candidate => candidate.id === dependency)) {
@@ -265,6 +362,7 @@ function validateInstallManifests() {
 
 module.exports = {
   runProfileSettingsSemanticChecks,
+  runProfilePromotionGateCheck,
 };
 
 if (require.main === module) {

@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "install-operations.schema.json",
+  "title": "ECC Install Operation Kinds",
+  "description": "Shared operation-kind enum consumed by install-state and install-plan schemas.",
+  "definitions": {
+    "kind": {
+      "type": "string",
+      "enum": ["copy-file", "copy-path", "merge-json", "copy-tree", "flatten-copy", "render-template", "merge-jsonc", "mkdir", "remove"]
+    }
+  }
+}
