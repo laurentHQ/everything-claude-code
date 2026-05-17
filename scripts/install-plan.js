@@ -14,6 +14,10 @@ const {
   loadInstallConfig,
 } = require('./lib/install/config');
 const { normalizeInstallRequest } = require('./lib/install/request');
+const { buildPlanDocument } = require('./lib/install/plan-operations');
+const { getInstallTargetAdapter } = require('./lib/install-targets/registry');
+const path = require('path');
+const os = require('os');
 
 function showHelp() {
   console.log(`
@@ -263,7 +267,37 @@ function main() {
     });
 
     if (options.json) {
-      console.log(JSON.stringify(plan, null, 2));
+      // MVP: when a target is supplied, emit the canonical install-plan
+      // document (schemas/install-plan.schema.json). Without a target the
+      // schema cannot be satisfied (target is required), so fall back to the
+      // legacy resolveInstallPlan dump for backwards compatibility.
+      // Switch to the canonical install-plan document only when the user
+      // explicitly supplied --target (or a config file set one). request.target
+      // defaults to 'claude' under the hood, so it's not a reliable opt-in
+      // signal — we use the raw CLI/config target instead.
+      const explicitTarget = options.target || (config && config.target) || null;
+      if (explicitTarget) {
+        const repoRoot = path.resolve(__dirname, '..');
+        let adapter = null;
+        try {
+          adapter = getInstallTargetAdapter(request.target);
+        } catch (_err) {
+          adapter = null;
+        }
+        const planDoc = buildPlanDocument(plan, adapter, {
+          scope: null,
+          planningInput: {
+            repoRoot,
+            projectRoot: process.cwd(),
+            homeDir: os.homedir(),
+          },
+          profileSettings: plan.profileSettings || null,
+          repoVersion: null,
+        });
+        console.log(JSON.stringify(planDoc, null, 2));
+      } else {
+        console.log(JSON.stringify(plan, null, 2));
+      }
     } else {
       printPlan(plan);
     }

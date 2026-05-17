@@ -325,7 +325,7 @@ function runTests() {
             sourceRelativePath: 'missing/source.md',
             strategy: 'copy-file',
           }),
-          managedOperation('custom-kind', customDestination),
+          managedOperation('mkdir', customDestination),
         ],
       }));
 
@@ -641,7 +641,7 @@ function runTests() {
       const unsupportedDestination = path.join(unsupportedProjectRoot, '.cursor', 'custom.txt');
       writeCursorState(unsupportedProjectRoot, {
         operations: [
-          managedOperation('custom-kind', unsupportedDestination),
+          managedOperation('mkdir', unsupportedDestination),
         ],
       });
       result = repairInstalledStates({
@@ -1565,7 +1565,7 @@ function runTests() {
       fs.writeFileSync(destinationPath, 'custom\n');
       writeCursorState(unsupportedProjectRoot, {
         operations: [
-          managedOperation('custom-kind', destinationPath),
+          managedOperation('mkdir', destinationPath),
         ],
       });
 

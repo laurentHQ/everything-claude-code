@@ -13,6 +13,19 @@ try {
 
 const SCHEMA_PATH = path.join(__dirname, '..', '..', 'schemas', 'install-state.schema.json');
 
+const SCHEMA_VERSION = 'ecc.install.v2';
+const KNOWN_OPERATION_KINDS = new Set([
+  'copy-file',
+  'copy-path',
+  'merge-json',
+  'copy-tree',
+  'flatten-copy',
+  'render-template',
+  'merge-jsonc',
+  'mkdir',
+  'remove',
+]);
+
 let cachedValidator = null;
 
 function cloneJsonValue(value) {
@@ -98,11 +111,22 @@ function createFallbackValidator() {
     validateNoAdditionalProperties(
       state,
       '',
-      ['schemaVersion', 'installedAt', 'lastValidatedAt', 'target', 'request', 'resolution', 'source', 'operations']
+      [
+        'schemaVersion',
+        'installedAt',
+        'lastValidatedAt',
+        'target',
+        'request',
+        'resolution',
+        'source',
+        'operations',
+        'settings',
+        'backups',
+      ]
     );
 
-    if (state.schemaVersion !== 'ecc.install.v1') {
-      pushError('/schemaVersion', 'must equal ecc.install.v1');
+    if (state.schemaVersion !== SCHEMA_VERSION) {
+      pushError('/schemaVersion', `must equal ${SCHEMA_VERSION}`);
     }
 
     if (!isNonEmptyString(state.installedAt)) {
@@ -175,6 +199,97 @@ function createFallbackValidator() {
       }
     }
 
+    if (state.settings !== undefined) {
+      const settings = state.settings;
+      if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        pushError('/settings', 'must be object');
+      } else {
+        validateNoAdditionalProperties(
+          settings,
+          '/settings',
+          [
+            'scope',
+            'hook_profile',
+            'allow_mcp',
+            'allowed_mcp_servers',
+            'require_dry_run_first',
+            'require_audit_log',
+            'block_global_install',
+            'write_scope',
+            'lifecycle',
+          ]
+        );
+        if (settings.scope !== undefined && !['project', 'user', 'sandbox'].includes(settings.scope)) {
+          pushError('/settings/scope', 'must be project|user|sandbox');
+        }
+        if (
+          settings.hook_profile !== undefined
+          && !['none', 'standard', 'strict', 'validation'].includes(settings.hook_profile)
+        ) {
+          pushError('/settings/hook_profile', 'must be none|standard|strict|validation');
+        }
+        if (settings.allow_mcp !== undefined && typeof settings.allow_mcp !== 'boolean') {
+          pushError('/settings/allow_mcp', 'must be boolean');
+        }
+        if (settings.allowed_mcp_servers !== undefined) {
+          if (!Array.isArray(settings.allowed_mcp_servers)) {
+            pushError('/settings/allowed_mcp_servers', 'must be array');
+          } else {
+            settings.allowed_mcp_servers.forEach((value, index) => {
+              if (typeof value !== 'string' || !/^[a-z0-9_-]+$/.test(value)) {
+                pushError(`/settings/allowed_mcp_servers/${index}`, 'must match pattern');
+              }
+            });
+          }
+        }
+        if (settings.require_dry_run_first !== undefined && typeof settings.require_dry_run_first !== 'boolean') {
+          pushError('/settings/require_dry_run_first', 'must be boolean');
+        }
+        if (settings.require_audit_log !== undefined && typeof settings.require_audit_log !== 'boolean') {
+          pushError('/settings/require_audit_log', 'must be boolean');
+        }
+        if (settings.block_global_install !== undefined && typeof settings.block_global_install !== 'boolean') {
+          pushError('/settings/block_global_install', 'must be boolean');
+        }
+        if (
+          settings.write_scope !== undefined
+          && !['project-only', 'project-local', 'controlled'].includes(settings.write_scope)
+        ) {
+          pushError('/settings/write_scope', 'must be project-only|project-local|controlled');
+        }
+        if (
+          settings.lifecycle !== undefined
+          && !['draft', 'candidate', 'promoted'].includes(settings.lifecycle)
+        ) {
+          pushError('/settings/lifecycle', 'must be draft|candidate|promoted');
+        }
+      }
+    }
+
+    if (state.backups !== undefined) {
+      if (!Array.isArray(state.backups)) {
+        pushError('/backups', 'must be array');
+      } else {
+        state.backups.forEach((entry, index) => {
+          const entryPath = `/backups/${index}`;
+          if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+            pushError(entryPath, 'must be object');
+            return;
+          }
+          validateNoAdditionalProperties(entry, entryPath, ['destination', 'backupPath', 'recordedAt']);
+          if (!isNonEmptyString(entry.destination)) {
+            pushError(`${entryPath}/destination`, 'must be non-empty string');
+          }
+          if (!isNonEmptyString(entry.backupPath)) {
+            pushError(`${entryPath}/backupPath`, 'must be non-empty string');
+          }
+          if (!isNonEmptyString(entry.recordedAt)) {
+            pushError(`${entryPath}/recordedAt`, 'must be non-empty string');
+          }
+        });
+      }
+    }
+
     if (!Array.isArray(state.operations)) {
       pushError('/operations', 'must be array');
     } else {
@@ -189,6 +304,8 @@ function createFallbackValidator() {
 
         if (!isNonEmptyString(operation.kind)) {
           pushError(`${instancePath}/kind`, 'must be non-empty string');
+        } else if (!KNOWN_OPERATION_KINDS.has(operation.kind)) {
+          pushError(`${instancePath}/kind`, `must be one of: ${[...KNOWN_OPERATION_KINDS].join(', ')}`);
         }
         if (!isNonEmptyString(operation.moduleId)) {
           pushError(`${instancePath}/moduleId`, 'must be non-empty string');
@@ -240,10 +357,42 @@ function assertValidInstallState(state, label) {
   }
 }
 
+/**
+ * Migrate an install-state document to the current SCHEMA_VERSION.
+ *   - v2 input: returned unchanged (identity).
+ *   - v1 input: shallow-clone with schemaVersion bumped to v2. v1 fields are
+ *     a strict subset of v2 (settings + backups are optional in v2), so no
+ *     other transform is needed.
+ *   - Unknown schemaVersion: warns to stderr and returns the input unchanged
+ *     so the downstream validator surfaces a "must equal ecc.install.v2"
+ *     error. The warning keeps the failure diagnosable when a future v3
+ *     state lands without an updated client.
+ *   - Non-object input: throws.
+ */
+function migrateInstallState(state) {
+  if (!state || typeof state !== 'object' || Array.isArray(state)) {
+    throw new Error('Cannot migrate install-state: input is not a JSON object');
+  }
+
+  if (state.schemaVersion === SCHEMA_VERSION) {
+    return state;
+  }
+
+  if (state.schemaVersion === 'ecc.install.v1') {
+    return { ...state, schemaVersion: SCHEMA_VERSION };
+  }
+
+  process.stderr.write(
+    `[install-state] unknown schemaVersion ${JSON.stringify(state.schemaVersion)}; ` +
+    `known versions: ecc.install.v1, ${SCHEMA_VERSION}. Passing through; validator will reject.\n`
+  );
+  return state;
+}
+
 function createInstallState(options) {
   const installedAt = options.installedAt || new Date().toISOString();
   const state = {
-    schemaVersion: 'ecc.install.v1',
+    schemaVersion: SCHEMA_VERSION,
     installedAt,
     target: {
       id: options.adapter.id,
@@ -288,12 +437,23 @@ function createInstallState(options) {
     state.lastValidatedAt = options.lastValidatedAt;
   }
 
+  if (options.settings !== undefined && options.settings !== null) {
+    state.settings = cloneJsonValue(options.settings);
+  }
+
+  if (options.backups !== undefined && options.backups !== null) {
+    state.backups = Array.isArray(options.backups)
+      ? options.backups.map(entry => cloneJsonValue(entry))
+      : cloneJsonValue(options.backups);
+  }
+
   assertValidInstallState(state, 'create');
   return state;
 }
 
 function readInstallState(filePath) {
-  const state = readJson(filePath, 'install-state');
+  const raw = readJson(filePath, 'install-state');
+  const state = migrateInstallState(raw);
   assertValidInstallState(state, filePath);
   return state;
 }
@@ -307,7 +467,9 @@ function writeInstallState(filePath, state) {
 
 module.exports = {
   createInstallState,
+  migrateInstallState,
   readInstallState,
   validateInstallState,
   writeInstallState,
+  SCHEMA_VERSION,
 };

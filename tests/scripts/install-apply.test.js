@@ -605,7 +605,7 @@ function runTests() {
         targetRoot: path.join(tempDir, 'installed'),
         installStatePath,
         statePreview: {
-          schemaVersion: 'ecc.install.v1',
+          schemaVersion: 'ecc.install.v2',
           installedAt: new Date().toISOString(),
           target: {
             id: 'test-install',
@@ -756,7 +756,7 @@ function runTests() {
           targetRoot,
           installStatePath,
           statePreview: {
-            schemaVersion: 'ecc.install.v1',
+            schemaVersion: 'ecc.install.v2',
             installedAt: new Date().toISOString(),
             target: {
               id: 'claude-home',

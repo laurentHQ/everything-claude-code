@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://everything-claude-code.dev/schemas/install-plan.schema.json",
+  "title": "ECC Install Plan",
+  "description": "Canonical install-plan JSON document emitted by `scripts/install-plan.js --json` (and other planners). Operations are sorted by (moduleId, destinationPath) ASCII; conflicts are sorted by (destination, reason). The order is a contract — snapshot tests depend on it.",
+  "type": "object",
+  "required": [
+    "tool",
+    "version",
+    "profileId",
+    "target",
+    "scope",
+    "modules",
+    "operations",
+    "conflicts",
+    "warnings",
+    "safety"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "tool": {
+      "type": "string",
+      "const": "ecc"
+    },
+    "version": {
+      "type": ["string", "null"]
+    },
+    "profileId": {
+      "type": ["string", "null"]
+    },
+    "target": {
+      "type": ["string", "null"]
+    },
+    "scope": {
+      "type": ["string", "null"]
+    },
+    "modules": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "moduleId",
+          "destinationPath"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "copy-file",
+              "copy-path",
+              "merge-json",
+              "copy-tree",
+              "flatten-copy",
+              "render-template",
+              "merge-jsonc",
+              "mkdir",
+              "remove"
+            ]
+          },
+          "moduleId": { "type": "string" },
+          "sourceRelativePath": { "type": "string" },
+          "sourcePath": { "type": "string" },
+          "destinationPath": { "type": "string" }
+        },
+        "anyOf": [
+          { "required": ["sourceRelativePath"] },
+          { "required": ["sourcePath"] },
+          { "properties": { "kind": { "enum": ["mkdir", "remove", "merge-json"] } } }
+        ]
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["destination", "reason", "severity"],
+        "additionalProperties": true,
+        "properties": {
+          "destination": { "type": "string" },
+          "moduleId": { "type": "string" },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "file-exists",
+              "outside-allowed-root",
+              "unmanaged-file",
+              "profile-conflict",
+              "mcp-not-allowed",
+              "global-install-blocked"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["warning", "error"]
+          },
+          "resolution": { "type": "string" }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "object" }
+        ]
+      }
+    },
+    "safety": {
+      "type": "object",
+      "required": [
+        "dryRunRequired",
+        "globalInstallAllowed",
+        "mcpAllowed",
+        "allDestinationsInsideAllowedRoots"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "dryRunRequired": { "type": "boolean" },
+        "globalInstallAllowed": { "type": "boolean" },
+        "mcpAllowed": { "type": "boolean" },
+        "allDestinationsInsideAllowedRoots": { "type": "boolean" }
+      }
+    }
+  }
+}

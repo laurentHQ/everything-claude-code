@@ -1,0 +1,458 @@
+{
+  "tool": "ecc",
+  "version": null,
+  "profileId": "security",
+  "target": "claude",
+  "scope": null,
+  "modules": [
+    "rules-core",
+    "agents-core",
+    "commands-core",
+    "hooks-runtime",
+    "platform-configs",
+    "workflow-quality",
+    "security"
+  ],
+  "operations": [
+    {
+      "kind": "copy-path",
+      "moduleId": "agents-core",
+      "sourceRelativePath": ".agents",
+      "destinationPath": "<HOME>/.claude/.agents",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "agents-core",
+      "sourceRelativePath": "AGENTS.md",
+      "destinationPath": "<HOME>/.claude/AGENTS.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "agents-core",
+      "sourceRelativePath": "agents",
+      "destinationPath": "<HOME>/.claude/agents",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "commands-core",
+      "sourceRelativePath": "commands",
+      "destinationPath": "<HOME>/.claude/commands",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "hooks-runtime",
+      "sourceRelativePath": "hooks",
+      "destinationPath": "<HOME>/.claude/hooks",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "hooks-runtime",
+      "sourceRelativePath": "scripts/hooks",
+      "destinationPath": "<HOME>/.claude/scripts/hooks",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "hooks-runtime",
+      "sourceRelativePath": "scripts/lib",
+      "destinationPath": "<HOME>/.claude/scripts/lib",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": ".claude-plugin",
+      "destinationPath": "<HOME>/.claude",
+      "strategy": "sync-root-children",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": "mcp-configs",
+      "destinationPath": "<HOME>/.claude/mcp-configs",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": "scripts/auto-update.js",
+      "destinationPath": "<HOME>/.claude/scripts/auto-update.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "platform-configs",
+      "sourceRelativePath": "scripts/setup-package-manager.js",
+      "destinationPath": "<HOME>/.claude/scripts/setup-package-manager.js",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "rules-core",
+      "sourceRelativePath": "rules",
+      "destinationPath": "<HOME>/.claude/rules/ecc",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/defi-amm-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/defi-amm-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/django-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/django-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/evm-token-decimals",
+      "destinationPath": "<HOME>/.claude/skills/ecc/evm-token-decimals",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/healthcare-phi-compliance",
+      "destinationPath": "<HOME>/.claude/skills/ecc/healthcare-phi-compliance",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/hipaa-compliance",
+      "destinationPath": "<HOME>/.claude/skills/ecc/hipaa-compliance",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/laravel-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/laravel-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/llm-trading-agent-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/llm-trading-agent-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/nodejs-keccak256",
+      "destinationPath": "<HOME>/.claude/skills/ecc/nodejs-keccak256",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/perl-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/perl-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/quarkus-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/quarkus-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/security-bounty-hunter",
+      "destinationPath": "<HOME>/.claude/skills/ecc/security-bounty-hunter",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/security-review",
+      "destinationPath": "<HOME>/.claude/skills/ecc/security-review",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/security-scan",
+      "destinationPath": "<HOME>/.claude/skills/ecc/security-scan",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "skills/springboot-security",
+      "destinationPath": "<HOME>/.claude/skills/ecc/springboot-security",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "security",
+      "sourceRelativePath": "the-security-guide.md",
+      "destinationPath": "<HOME>/.claude/the-security-guide.md",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/agent-introspection-debugging",
+      "destinationPath": "<HOME>/.claude/skills/ecc/agent-introspection-debugging",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/agent-sort",
+      "destinationPath": "<HOME>/.claude/skills/ecc/agent-sort",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/ai-regression-testing",
+      "destinationPath": "<HOME>/.claude/skills/ecc/ai-regression-testing",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/code-tour",
+      "destinationPath": "<HOME>/.claude/skills/ecc/code-tour",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/configure-ecc",
+      "destinationPath": "<HOME>/.claude/skills/ecc/configure-ecc",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/continuous-learning",
+      "destinationPath": "<HOME>/.claude/skills/ecc/continuous-learning",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/continuous-learning-v2",
+      "destinationPath": "<HOME>/.claude/skills/ecc/continuous-learning-v2",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/council",
+      "destinationPath": "<HOME>/.claude/skills/ecc/council",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/e2e-testing",
+      "destinationPath": "<HOME>/.claude/skills/ecc/e2e-testing",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/error-handling",
+      "destinationPath": "<HOME>/.claude/skills/ecc/error-handling",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/eval-harness",
+      "destinationPath": "<HOME>/.claude/skills/ecc/eval-harness",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/hookify-rules",
+      "destinationPath": "<HOME>/.claude/skills/ecc/hookify-rules",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/iterative-retrieval",
+      "destinationPath": "<HOME>/.claude/skills/ecc/iterative-retrieval",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/plankton-code-quality",
+      "destinationPath": "<HOME>/.claude/skills/ecc/plankton-code-quality",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/production-audit",
+      "destinationPath": "<HOME>/.claude/skills/ecc/production-audit",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/skill-scout",
+      "destinationPath": "<HOME>/.claude/skills/ecc/skill-scout",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/skill-stocktake",
+      "destinationPath": "<HOME>/.claude/skills/ecc/skill-stocktake",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/strategic-compact",
+      "destinationPath": "<HOME>/.claude/skills/ecc/strategic-compact",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/tdd-workflow",
+      "destinationPath": "<HOME>/.claude/skills/ecc/tdd-workflow",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/verification-loop",
+      "destinationPath": "<HOME>/.claude/skills/ecc/verification-loop",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    },
+    {
+      "kind": "copy-path",
+      "moduleId": "workflow-quality",
+      "sourceRelativePath": "skills/windows-desktop-e2e",
+      "destinationPath": "<HOME>/.claude/skills/ecc/windows-desktop-e2e",
+      "strategy": "preserve-relative-path",
+      "ownership": "managed",
+      "scaffoldOnly": true
+    }
+  ],
+  "conflicts": [],
+  "warnings": [],
+  "safety": {
+    "dryRunRequired": true,
+    "globalInstallAllowed": false,
+    "mcpAllowed": false,
+    "allDestinationsInsideAllowedRoots": true
+  }
+}

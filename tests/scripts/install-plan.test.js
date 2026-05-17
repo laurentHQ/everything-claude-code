@@ -91,7 +91,7 @@ function runTests() {
     assert.ok(result.stdout.includes('security'));
   })) passed++; else failed++;
 
-  if (test('emits JSON for explicit module resolution', () => {
+  if (test('emits canonical install-plan JSON for explicit module resolution', () => {
     const result = run([
       '--modules', 'security',
       '--with', 'capability:research',
@@ -100,16 +100,19 @@ function runTests() {
     ]);
     assert.strictEqual(result.code, 0);
     const parsed = JSON.parse(result.stdout);
-    assert.ok(parsed.selectedModuleIds.includes('security'));
-    assert.ok(parsed.selectedModuleIds.includes('research-apis'));
-    assert.ok(parsed.selectedModuleIds.includes('workflow-quality'));
-    assert.deepStrictEqual(parsed.includedComponentIds, ['capability:research']);
-    assert.strictEqual(parsed.targetAdapterId, 'cursor-project');
+    // New canonical document shape (schemas/install-plan.schema.json).
+    assert.strictEqual(parsed.tool, 'ecc');
+    assert.strictEqual(parsed.target, 'cursor');
+    assert.ok(Array.isArray(parsed.modules));
+    assert.ok(parsed.modules.includes('security'));
+    assert.ok(parsed.modules.includes('research-apis'));
+    assert.ok(parsed.modules.includes('workflow-quality'));
     assert.ok(Array.isArray(parsed.operations));
     assert.ok(parsed.operations.length > 0);
+    assert.ok(parsed.safety && typeof parsed.safety === 'object');
   })) passed++; else failed++;
 
-  if (test('emits JSON for --skills without pulling parent module', () => {
+  if (test('emits canonical install-plan JSON for --skills without pulling parent module', () => {
     const result = run([
       '--skills', 'continuous-learning-v2',
       '--target', 'claude',
@@ -117,8 +120,9 @@ function runTests() {
     ]);
     assert.strictEqual(result.code, 0);
     const parsed = JSON.parse(result.stdout);
-    assert.deepStrictEqual(parsed.includedComponentIds, ['skill:continuous-learning-v2']);
-    assert.deepStrictEqual(parsed.selectedModuleIds, ['skill-continuous-learning-v2']);
+    assert.strictEqual(parsed.tool, 'ecc');
+    assert.strictEqual(parsed.target, 'claude');
+    assert.deepStrictEqual(parsed.modules, ['skill-continuous-learning-v2']);
     assert.ok(parsed.operations.some(operation => operation.sourceRelativePath === 'skills/continuous-learning-v2'));
     assert.ok(!parsed.operations.some(operation => operation.sourceRelativePath === 'skills/tdd-workflow'));
   })) passed++; else failed++;
@@ -140,11 +144,11 @@ function runTests() {
       const result = run(['--config', configPath, '--json']);
       assert.strictEqual(result.code, 0);
       const parsed = JSON.parse(result.stdout);
+      // Config explicitly sets target=cursor, so canonical document shape applies.
+      assert.strictEqual(parsed.tool, 'ecc');
       assert.strictEqual(parsed.target, 'cursor');
-      assert.deepStrictEqual(parsed.includedComponentIds, ['capability:security']);
-      assert.deepStrictEqual(parsed.excludedComponentIds, ['capability:orchestration']);
-      assert.ok(parsed.selectedModuleIds.includes('security'));
-      assert.ok(!parsed.selectedModuleIds.includes('orchestration'));
+      assert.ok(parsed.modules.includes('security'));
+      assert.ok(!parsed.modules.includes('orchestration'));
     } finally {
       require('fs').rmSync(configDir, { recursive: true, force: true });
     }
@@ -166,10 +170,11 @@ function runTests() {
       const result = run(['--json'], { cwd: configDir });
       assert.strictEqual(result.code, 0, result.stderr);
       const parsed = JSON.parse(result.stdout);
+      // Auto-detected config sets target=cursor, so canonical document shape applies.
+      assert.strictEqual(parsed.tool, 'ecc');
       assert.strictEqual(parsed.target, 'cursor');
       assert.strictEqual(parsed.profileId, 'core');
-      assert.deepStrictEqual(parsed.includedComponentIds, ['capability:security']);
-      assert.ok(parsed.selectedModuleIds.includes('security'));
+      assert.ok(parsed.modules.includes('security'));
     } finally {
       require('fs').rmSync(configDir, { recursive: true, force: true });
     }

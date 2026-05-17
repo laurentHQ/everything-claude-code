@@ -9,7 +9,16 @@
         "commands-core",
         "platform-configs",
         "workflow-quality"
-      ]
+      ],
+      "targets": ["claude", "codex", "opencode"],
+      "settings": {
+        "scope": "project",
+        "hook_profile": "none",
+        "allow_mcp": false,
+        "write_scope": "project-only",
+        "require_dry_run_first": true,
+        "lifecycle": "draft"
+      }
     },
     "core": {
       "description": "Minimal harness baseline with commands, hooks, platform configs, and quality workflow support.",
@@ -20,7 +29,14 @@
         "hooks-runtime",
         "platform-configs",
         "workflow-quality"
-      ]
+      ],
+      "targets": ["claude", "codex", "opencode"],
+      "settings": {
+        "hook_profile": "standard",
+        "allow_mcp": false,
+        "require_dry_run_first": true,
+        "lifecycle": "draft"
+      }
     },
     "developer": {
       "description": "Default engineering profile for most ECC users working across app codebases.",
@@ -34,7 +50,15 @@
         "framework-language",
         "database",
         "orchestration"
-      ]
+      ],
+      "targets": ["claude", "codex", "opencode"],
+      "settings": {
+        "hook_profile": "standard",
+        "write_scope": "project-local",
+        "allow_mcp": false,
+        "require_dry_run_first": true,
+        "lifecycle": "draft"
+      }
     },
     "security": {
       "description": "Security-heavy setup with baseline runtime support and security-specific guidance.",
@@ -46,7 +70,16 @@
         "platform-configs",
         "workflow-quality",
         "security"
-      ]
+      ],
+      "targets": ["claude", "codex", "opencode"],
+      "settings": {
+        "hook_profile": "strict",
+        "block_global_install": true,
+        "allow_mcp": false,
+        "require_audit_log": true,
+        "require_dry_run_first": true,
+        "lifecycle": "draft"
+      }
     },
     "research": {
       "description": "Research and content-oriented setup for investigation, synthesis, and publishing workflows.",
@@ -60,7 +93,14 @@
         "research-apis",
         "business-content",
         "social-distribution"
-      ]
+      ],
+      "targets": ["claude", "codex", "opencode"],
+      "settings": {
+        "hook_profile": "standard",
+        "allow_mcp": false,
+        "require_dry_run_first": true,
+        "lifecycle": "draft"
+      }
     },
     "full": {
       "description": "Complete ECC install with all currently classified modules.",
@@ -86,7 +126,53 @@
         "machine-learning",
         "supply-chain-domain",
         "document-processing"
-      ]
+      ],
+      "settings": {
+        "lifecycle": "draft"
+      }
+    },
+    "document-ai": {
+      "description": "Document-AI profile for validation-grade document processing workflows with audit logging.",
+      "modules": [
+        "rules-core",
+        "agents-core",
+        "commands-core",
+        "hooks-runtime",
+        "platform-configs",
+        "workflow-quality"
+      ],
+      "targets": ["claude", "codex"],
+      "settings": {
+        "hook_profile": "validation",
+        "require_audit_log": true,
+        "require_dry_run_first": true,
+        "write_scope": "project-local",
+        "allow_mcp": false,
+        "lifecycle": "draft"
+      }
+    },
+    "enterprise": {
+      "description": "Enterprise profile with strict hooks, controlled write scope, audit logging, and curated MCP allowlist.",
+      "modules": [
+        "rules-core",
+        "agents-core",
+        "commands-core",
+        "hooks-runtime",
+        "platform-configs",
+        "workflow-quality",
+        "security"
+      ],
+      "targets": ["claude", "codex"],
+      "settings": {
+        "hook_profile": "strict",
+        "require_audit_log": true,
+        "allow_mcp": true,
+        "allowed_mcp_servers": ["context7", "github"],
+        "write_scope": "controlled",
+        "block_global_install": false,
+        "require_dry_run_first": true,
+        "lifecycle": "draft"
+      }
     }
   }
 }

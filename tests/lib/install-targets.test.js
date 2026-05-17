@@ -10,6 +10,7 @@ const {
   listInstallTargetAdapters,
   planInstallTargetScaffold,
 } = require('../../scripts/lib/install-targets/registry');
+const { assertInsideAllowedRoot } = require('../../scripts/lib/install/path-safety');
 
 function normalizedRelativePath(value) {
   return String(value || '').replace(/\\/g, '/');
@@ -762,6 +763,95 @@ function runTests() {
         `Supported: ${SUPPORTED_INSTALL_TARGETS.join(', ')}`
       );
     }
+  })) passed++; else failed++;
+
+  if (test('claude adapter allowedRoots(apply) returns array including targetRoot', () => {
+    const adapter = getInstallTargetAdapter('claude');
+    const targetRoot = path.join('/tmp', 'x', '.claude');
+    const roots = adapter.allowedRoots('apply', { targetRoot });
+    assert.ok(Array.isArray(roots), 'allowedRoots should return an array');
+    assert.ok(roots.includes(targetRoot), `allowedRoots should include ${targetRoot}, got: ${roots.join(', ')}`);
+  })) passed++; else failed++;
+
+  if (test('claude adapter allowedRoots(sandbox) without targetRoot falls back to resolved sandbox root', () => {
+    const adapter = getInstallTargetAdapter('claude');
+    const roots = adapter.allowedRoots('sandbox', {});
+    const expectedSandboxRoot = path.resolve('./sandbox/home/.claude');
+    assert.ok(Array.isArray(roots));
+    assert.ok(
+      roots.includes(expectedSandboxRoot),
+      `allowedRoots should include resolved sandbox root ${expectedSandboxRoot}, got: ${roots.join(', ')}`
+    );
+  })) passed++; else failed++;
+
+  if (test('codex adapter allowedRoots(apply) returns array including targetRoot', () => {
+    const adapter = getInstallTargetAdapter('codex');
+    const targetRoot = path.join('/tmp', 'x', '.codex');
+    const roots = adapter.allowedRoots('apply', { targetRoot });
+    assert.ok(Array.isArray(roots));
+    assert.ok(roots.includes(targetRoot), `allowedRoots should include ${targetRoot}, got: ${roots.join(', ')}`);
+  })) passed++; else failed++;
+
+  if (test('opencode adapter allowedRoots returns [] (opt-in default unchanged, MVP defers opencode)', () => {
+    const adapter = getInstallTargetAdapter('opencode');
+    const roots = adapter.allowedRoots('apply', { targetRoot: '/tmp/x/.opencode' });
+    assert.ok(Array.isArray(roots));
+    assert.strictEqual(roots.length, 0, `Expected empty allowedRoots for opencode, got: ${roots.join(', ')}`);
+  })) passed++; else failed++;
+
+  if (test('round-trip: createManifestInstallPlan claude operations stay under computed allowed root', () => {
+    const fs = require('fs');
+    const os = require('os');
+    const { createManifestInstallPlan } = require('../../scripts/lib/install-executor');
+
+    const homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ecc-allowed-roots-'));
+    try {
+      const plan = createManifestInstallPlan({
+        target: 'claude',
+        profileId: 'minimal',
+        homeDir,
+      });
+
+      const adapter = getInstallTargetAdapter('claude');
+      const roots = adapter.allowedRoots('apply', {
+        homeDir,
+        projectRoot: plan.projectRoot,
+        repoRoot: plan.repoRoot,
+        targetRoot: plan.targetRoot,
+      });
+
+      const expectedRoot = path.join(homeDir, '.claude');
+      assert.ok(
+        roots.includes(expectedRoot),
+        `Expected allowedRoots to include ${expectedRoot}, got: ${roots.join(', ')}`
+      );
+
+      assert.ok(plan.operations.length > 0, 'Plan should contain at least one operation');
+      for (const operation of plan.operations) {
+        assert.ok(
+          operation.destinationPath.startsWith(expectedRoot),
+          `Operation destinationPath ${operation.destinationPath} is not under ${expectedRoot}`
+        );
+      }
+    } finally {
+      try { require('fs').rmSync(homeDir, { recursive: true, force: true }); } catch (_) { /* ignore */ }
+    }
+  })) passed++; else failed++;
+
+  if (test('claude allowedRoots: assertInsideAllowedRoot rejects destination outside computed root', () => {
+    const adapter = getInstallTargetAdapter('claude');
+    const roots = adapter.allowedRoots('apply', { targetRoot: '/tmp/x/.claude' });
+    let caught = null;
+    try {
+      assertInsideAllowedRoot('/tmp/x/escape.txt', roots);
+    } catch (error) {
+      caught = error;
+    }
+    assert.ok(caught, 'Expected assertInsideAllowedRoot to throw');
+    assert.ok(
+      /outside-allowed-root/.test(caught.message),
+      `Expected error message to contain "outside-allowed-root", got: ${caught.message}`
+    );
   })) passed++; else failed++;
 
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
