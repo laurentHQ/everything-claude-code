@@ -437,9 +437,14 @@ function runTests() {
       });
       const codes = report.results[0].issues.map(issue => issue.code);
 
-      assert.strictEqual(report.results[0].status, 'warning');
+      // Wave 0 (I5): malformed JSON destinations are now classified as
+      // parse-error (severity: error) rather than drifted (severity:
+      // warning), because automatic repair would overwrite unreadable
+      // user data. Status therefore bumps to 'error'.
+      assert.strictEqual(report.results[0].status, 'error');
       assert.ok(codes.includes('unverified-managed-operations'));
-      assert.ok(codes.includes('drifted-managed-files'));
+      assert.ok(codes.includes('parse-error-managed-files'),
+        `expected parse-error-managed-files issue, got: ${codes.join(', ')}`);
       assert.ok(!report.results[0].issues.some(issue => issue.code === 'missing-managed-files'));
     } finally {
       cleanup(homeDir);

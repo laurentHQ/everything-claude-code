@@ -74,8 +74,12 @@ function areFilesEqual(leftPath, rightPath) {
     }
 
     return fs.readFileSync(leftPath).equals(fs.readFileSync(rightPath));
-  } catch (_error) {
-    return false;
+  } catch (error) {
+    // I6: only swallow ENOENT (missing-file is a legitimate "not equal" answer).
+    // Permission errors, EISDIR, EMFILE, etc. propagate so callers can
+    // distinguish "different" from "couldn't read".
+    if (error && error.code === 'ENOENT') return false;
+    throw error;
   }
 }
 
@@ -602,7 +606,26 @@ function inspectManagedOperation(repoRoot, operation) {
           destinationPath,
         };
       }
-    } catch (_error) {
+    } catch (error) {
+      // I5: surface permission and parse failures distinctly so callers
+      // (doctor, repair) can refuse to overwrite unreadable/unparseable
+      // user data instead of treating it as plain drift.
+      if (error && (error.code === 'EACCES' || error.code === 'EPERM')) {
+        return {
+          status: 'permission-error',
+          operation,
+          destinationPath,
+          error: error.code,
+        };
+      }
+      if (error instanceof SyntaxError || /JSON/.test(String(error && error.message))) {
+        return {
+          status: 'parse-error',
+          operation,
+          destinationPath,
+          error: error.message,
+        };
+      }
       return {
         status: 'drifted',
         operation,
@@ -631,6 +654,13 @@ function summarizeManagedOperationHealth(repoRoot, operations) {
       summary.missing.push(inspection);
     } else if (inspection.status === 'drifted') {
       summary.drifted.push(inspection);
+    } else if (inspection.status === 'parse-error') {
+      // I5: parse-error means the destination contains user data we cannot
+      // read; bucket separately so repair/doctor can refuse instead of
+      // overwriting unreadable JSON.
+      summary.parseError.push(inspection);
+    } else if (inspection.status === 'permission-error') {
+      summary.permissionError.push(inspection);
     } else if (inspection.status === 'missing-source') {
       summary.missingSource.push(inspection);
     } else if (inspection.status === 'unverified' || inspection.status === 'invalid-destination') {
@@ -642,6 +672,8 @@ function summarizeManagedOperationHealth(repoRoot, operations) {
     drifted: [],
     missingSource: [],
     unverified: [],
+    parseError: [],
+    permissionError: [],
   });
 }
 
@@ -809,6 +841,31 @@ function analyzeRecord(record, context) {
       `${operationHealth.drifted.length} managed file(s) differ from the source repo`,
       {
         paths: operationHealth.drifted.map(entry => entry.destinationPath),
+      }
+    ));
+  }
+
+  // I5: parse-error and permission-error are separate issue codes — these are
+  // ERRORS (not warnings) because the destination is in an unrecoverable state
+  // and automatic repair would destroy user data.
+  if (operationHealth.parseError.length > 0) {
+    issues.push(buildIssue(
+      'error',
+      'parse-error-managed-files',
+      `${operationHealth.parseError.length} managed file(s) failed to parse as JSON`,
+      {
+        paths: operationHealth.parseError.map(entry => entry.destinationPath),
+      }
+    ));
+  }
+
+  if (operationHealth.permissionError.length > 0) {
+    issues.push(buildIssue(
+      'error',
+      'permission-error-managed-files',
+      `${operationHealth.permissionError.length} managed file(s) could not be read due to permissions`,
+      {
+        paths: operationHealth.permissionError.map(entry => entry.destinationPath),
       }
     ));
   }
@@ -1029,6 +1086,32 @@ function repairInstalledStates(options = {}) {
           repairedPaths: [],
           plannedRepairs: [],
           error: `Missing source file(s): ${operationHealth.missingSource.map(entry => entry.sourcePath).join(', ')}`,
+        };
+      }
+
+      // I5: repair MUST refuse to touch destinations we cannot read or parse.
+      // Overwriting a parse-error or permission-error destination would be
+      // exactly the destructive behaviour the new statuses were introduced
+      // to prevent.
+      if (operationHealth.parseError.length > 0) {
+        return {
+          adapter: record.adapter,
+          status: 'repair-refused-parse-error',
+          installStatePath: record.installStatePath,
+          repairedPaths: [],
+          plannedRepairs: [],
+          error: `Refusing to repair unparseable JSON destination(s): ${operationHealth.parseError.map(entry => entry.destinationPath).join(', ')}`,
+        };
+      }
+
+      if (operationHealth.permissionError.length > 0) {
+        return {
+          adapter: record.adapter,
+          status: 'repair-refused-permission-error',
+          installStatePath: record.installStatePath,
+          repairedPaths: [],
+          plannedRepairs: [],
+          error: `Refusing to repair unreadable destination(s) (permission denied): ${operationHealth.permissionError.map(entry => entry.destinationPath).join(', ')}`,
         };
       }
 
@@ -1255,4 +1338,7 @@ module.exports = {
   normalizeTargets,
   repairInstalledStates,
   uninstallInstalledStates,
+  // Exposed for I5/I6 unit tests of merge-json inspection branches.
+  inspectManagedOperation,
+  summarizeManagedOperationHealth,
 };

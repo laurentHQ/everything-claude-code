@@ -16,6 +16,9 @@ const COMPONENTS_MANIFEST_PATH = path.join(REPO_ROOT, 'manifests/install-compone
 const MODULES_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-modules.schema.json');
 const PROFILES_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-profiles.schema.json');
 const COMPONENTS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-components.schema.json');
+// Shared sub-schemas: install-profiles.schema.json $refs install-settings.
+const SETTINGS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-settings.schema.json');
+const OPERATIONS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-operations.schema.json');
 const COMPONENT_FAMILY_PREFIXES = {
   baseline: 'baseline:',
   language: 'lang:',
@@ -119,6 +122,9 @@ function validateInstallManifests() {
   }
 
   const ajv = new Ajv({ allErrors: true });
+  // Pre-register shared sub-schemas so $ref resolution works for install-profiles.
+  ajv.addSchema(readJson(SETTINGS_SCHEMA_PATH, 'install-settings.schema.json'));
+  ajv.addSchema(readJson(OPERATIONS_SCHEMA_PATH, 'install-operations.schema.json'));
   hasErrors = validateSchema(ajv, MODULES_SCHEMA_PATH, modulesData, 'install-modules.json') || hasErrors;
   hasErrors = validateSchema(ajv, PROFILES_SCHEMA_PATH, profilesData, 'install-profiles.json') || hasErrors;
   if (fs.existsSync(COMPONENTS_MANIFEST_PATH)) {

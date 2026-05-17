@@ -18,6 +18,11 @@ const repoRoot = path.join(__dirname, '..', '..');
 const modulesSchemaPath = path.join(repoRoot, 'schemas', 'install-modules.schema.json');
 const profilesSchemaPath = path.join(repoRoot, 'schemas', 'install-profiles.schema.json');
 const componentsSchemaPath = path.join(repoRoot, 'schemas', 'install-components.schema.json');
+// Wave 0 (I10): install-profiles now $refs install-settings, and install-state/
+// install-plan $ref install-operations. Tests must override these paths so the
+// validator wrapper (which rewrites REPO_ROOT to a temp dir) can resolve them.
+const settingsSchemaPath = path.join(repoRoot, 'schemas', 'install-settings.schema.json');
+const operationsSchemaPath = path.join(repoRoot, 'schemas', 'install-operations.schema.json');
 
 // Test helpers
 function test(name, fn) {
@@ -2808,7 +2813,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(manifestsDir, 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on invalid JSON');
     assert.ok(result.stderr.includes('Invalid JSON'), 'Should report invalid JSON');
@@ -2877,7 +2884,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail when a referenced path is missing');
     assert.ok(result.stderr.includes('references missing path'), 'Should report missing path');
@@ -2946,7 +2955,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on duplicate claimed paths');
     assert.ok(result.stderr.includes('claimed by both'), 'Should report duplicate path claims');
@@ -2998,7 +3009,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on unknown profile module');
     assert.ok(result.stderr.includes('references unknown module ghost-module'),
@@ -3071,7 +3084,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 0, `Should pass valid fixture, got stderr: ${result.stderr}`);
     assert.ok(result.stdout.includes('Validated 2 install modules, 2 install components, and 6 profiles'),
@@ -3124,7 +3139,9 @@ function runTests() {
       COMPONENTS_MANIFEST_PATH: path.join(testDir, 'manifests', 'install-components.json'),
       MODULES_SCHEMA_PATH: modulesSchemaPath,
       PROFILES_SCHEMA_PATH: profilesSchemaPath,
-      COMPONENTS_SCHEMA_PATH: componentsSchemaPath
+      COMPONENTS_SCHEMA_PATH: componentsSchemaPath,
+      SETTINGS_SCHEMA_PATH: settingsSchemaPath,
+      OPERATIONS_SCHEMA_PATH: operationsSchemaPath
     });
     assert.strictEqual(result.code, 1, 'Should fail on unknown component module');
     assert.ok(result.stderr.includes('references unknown module ghost-module'),

@@ -14,7 +14,7 @@ const {
   loadInstallConfig,
 } = require('./lib/install/config');
 const { normalizeInstallRequest } = require('./lib/install/request');
-const { buildPlanDocument } = require('./lib/install/plan-operations');
+const { buildPlanDocument, assertPlanDocumentValid } = require('./lib/install/plan-operations');
 const { getInstallTargetAdapter } = require('./lib/install-targets/registry');
 const path = require('path');
 const os = require('os');
@@ -294,6 +294,11 @@ function main() {
           profileSettings: plan.profileSettings || null,
           repoVersion: null,
         });
+        // I3: defense-in-depth — re-validate just before serialising the
+        // canonical plan to stdout (buildPlanDocument already asserts, but
+        // a future caller mutating planDoc between build + print would slip
+        // an invalid doc through without this second gate).
+        assertPlanDocumentValid(planDoc);
         console.log(JSON.stringify(planDoc, null, 2));
       } else {
         console.log(JSON.stringify(plan, null, 2));

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "install-settings.schema.json",
+  "title": "ECC Profile Settings",
+  "description": "Shared settings shape consumed by install-profiles, install-state, and install-plan schemas.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "scope": { "type": "string", "enum": ["project", "user", "sandbox"] },
+    "hook_profile": { "type": "string", "enum": ["none", "standard", "strict", "validation"] },
+    "allow_mcp": { "type": "boolean" },
+    "allowed_mcp_servers": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9_-]+$" }
+    },
+    "require_dry_run_first": { "type": "boolean" },
+    "require_audit_log": { "type": "boolean" },
+    "block_global_install": { "type": "boolean" },
+    "write_scope": { "type": "string", "enum": ["project-only", "project-local", "controlled"] },
+    "lifecycle": { "type": "string", "enum": ["draft", "candidate", "promoted"] }
+  }
+}

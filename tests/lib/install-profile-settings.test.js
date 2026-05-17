@@ -16,6 +16,7 @@ const Ajv = require('ajv');
 
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const PROFILES_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-profiles.schema.json');
+const SETTINGS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-settings.schema.json');
 const PROFILES_MANIFEST_PATH = path.join(REPO_ROOT, 'manifests/install-profiles.json');
 
 const {
@@ -28,6 +29,7 @@ function readJson(filePath) {
 
 function buildValidator() {
   const ajv = new Ajv({ allErrors: true });
+  ajv.addSchema(readJson(SETTINGS_SCHEMA_PATH));
   const schema = readJson(PROFILES_SCHEMA_PATH);
   return ajv.compile(schema);
 }

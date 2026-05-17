@@ -14,6 +14,7 @@ const Ajv = require('ajv');
 const REPO_ROOT = path.resolve(__dirname, '../..');
 const SCRIPT = path.join(REPO_ROOT, 'scripts', 'install-plan.js');
 const SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-plan.schema.json');
+const OPERATIONS_SCHEMA_PATH = path.join(REPO_ROOT, 'schemas/install-operations.schema.json');
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -21,6 +22,7 @@ function readJson(filePath) {
 
 function buildValidator() {
   const ajv = new Ajv({ allErrors: true });
+  ajv.addSchema(readJson(OPERATIONS_SCHEMA_PATH));
   return ajv.compile(readJson(SCHEMA_PATH));
 }
 
