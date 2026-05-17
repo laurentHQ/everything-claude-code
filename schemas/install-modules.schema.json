@@ -84,6 +84,14 @@
               "beta",
               "stable"
             ]
+          },
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "safe",
+              "medium",
+              "high"
+            ]
           }
         },
         "required": [

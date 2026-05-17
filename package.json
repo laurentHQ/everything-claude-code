@@ -301,6 +301,7 @@
     "operator:dashboard": "node scripts/operator-readiness-dashboard.js",
     "platform:audit": "node scripts/platform-audit.js",
     "discussion:audit": "node scripts/discussion-audit.js",
+    "scan:secrets": "node scripts/ci/scan-secret-shapes.js",
     "security:ioc-scan": "node scripts/ci/scan-supply-chain-iocs.js",
     "security:advisory-sources": "node scripts/ci/supply-chain-advisory-sources.js",
     "claw": "node scripts/claw.js",

@@ -5,6 +5,7 @@ const path = require('path');
 const Ajv = require('ajv');
 
 const { isInsideAllowedRoot } = require('./path-safety');
+const { evaluatePolicy } = require('./policy');
 
 const SCHEMA_DIR = path.join(__dirname, '..', '..', '..', 'schemas');
 const PLAN_SCHEMA_PATH = path.join(SCHEMA_DIR, 'install-plan.schema.json');
@@ -120,6 +121,11 @@ function buildPlanDocument(resolvedRequest, adapter, options = {}) {
     }
   }
 
+  // T6: evaluate policy gates and merge their conflicts/warnings.
+  const policyResult = evaluatePolicy(resolvedRequest, profileSettings);
+  conflicts.push(...policyResult.conflicts);
+  const policyWarnings = Array.isArray(policyResult.warnings) ? policyResult.warnings : [];
+
   // Conflict-sort
   conflicts.sort((a, b) => {
     const ka = `${a.destination} ${a.reason}`;
@@ -148,7 +154,7 @@ function buildPlanDocument(resolvedRequest, adapter, options = {}) {
       : [],
     operations: sortedOps,
     conflicts,
-    warnings: [],
+    warnings: policyWarnings.slice(),
     safety,
   };
 

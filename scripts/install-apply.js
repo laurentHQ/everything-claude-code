@@ -118,6 +118,7 @@ function main() {
     } = require('./lib/install/config');
     const { applyInstallPlan } = require('./lib/install-executor');
     const { createInstallPlanFromRequest } = require('./lib/install/runtime');
+    const { evaluatePolicy, assertNoBlockingConflicts } = require('./lib/install/policy');
     const defaultConfigPath = options.configPath || options.languages.length > 0
       ? null
       : findDefaultInstallConfigPath({ cwd: process.cwd() });
@@ -142,6 +143,20 @@ function main() {
       }
       return;
     }
+
+    // T6: evaluate policy gates against the resolved request and refuse
+    // the install on any severity:"error" conflict. This is the primary
+    // CLI gate; install-executor.applyInstallPlan also re-asserts against
+    // any conflicts already attached to the plan as defense-in-depth.
+    const policyResult = evaluatePolicy(
+      {
+        selectedModules: plan.selectedModules || [],
+        includedComponentIds: plan.includedComponentIds || [],
+        scope: options.scope || null,
+      },
+      plan.profileSettings || null
+    );
+    assertNoBlockingConflicts(policyResult);
 
     const result = applyInstallPlan(plan);
     if (options.json) {

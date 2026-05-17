@@ -146,6 +146,7 @@ function validateInstallManifests() {
   const modules = Array.isArray(modulesData.modules) ? modulesData.modules : [];
   const moduleIds = new Set();
   const claimedPaths = new Map();
+  const ALLOWED_HOOK_RISK_LEVELS = ['safe', 'medium', 'high'];
 
   for (const module of modules) {
     if (moduleIds.has(module.id)) {
@@ -153,6 +154,16 @@ function validateInstallManifests() {
       hasErrors = true;
     }
     moduleIds.add(module.id);
+
+    // T6: kind:hooks must declare riskLevel for policy gate evaluation.
+    if (module.kind === 'hooks') {
+      if (!ALLOWED_HOOK_RISK_LEVELS.includes(module.riskLevel)) {
+        console.error(
+          `ERROR: Module ${module.id}: kind:hooks requires riskLevel (one of ${ALLOWED_HOOK_RISK_LEVELS.join('/')})`
+        );
+        hasErrors = true;
+      }
+    }
 
     for (const dependency of module.dependencies) {
       if (!moduleIds.has(dependency) && !modules.some(candidate => candidate.id === dependency)) {

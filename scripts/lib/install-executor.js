@@ -128,6 +128,12 @@ function createStatePreview(options) {
 }
 
 function applyInstallPlan(plan) {
+  // T6 defense-in-depth: if the plan-construction path already attached
+  // policy results, refuse the install on any severity:"error" conflict.
+  if (plan && Array.isArray(plan.conflicts) && plan.conflicts.length > 0) {
+    const { assertNoBlockingConflicts } = require('./install/policy');
+    assertNoBlockingConflicts(plan);
+  }
   const { applyInstallPlan: applyPlan } = require('./install/apply');
   return applyPlan(plan);
 }
@@ -719,6 +725,9 @@ function createManifestInstallPlan(options = {}) {
     excludedModuleIds: plan.excludedModuleIds,
     operations,
     statePreview,
+    // T6: expose the resolved-request fields the policy gate consumes.
+    selectedModules: plan.selectedModules,
+    profileSettings: plan.profileSettings,
   };
 }
 
