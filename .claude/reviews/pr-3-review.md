@@ -171,3 +171,67 @@ The cross-agent overlap on C1 (scope plumbing) + C2 (dead executor gate) is the 
 4. **Re-run plan-review on the V1.1 plan before launching its Wave 0** — would catch the kind of contract-vs-code drift that produced C1 here.
 
 5. **Re-run pr-review-toolkit after applying the 4 critical fixes** to verify no regressions.
+
+---
+
+# Re-review (2026-05-17) — after patch commit `56506317`
+
+**Scope:** `56506317` (the 4-critical fix commit).
+**Method:** 4 specialized agents (code-reviewer, pr-test-analyzer, silent-failure-hunter, comment-analyzer); type-design skipped (no new types).
+**Test baseline:** 2691/2691 passing after patch (was 2689 pre-patch; +2 from the C2 regression test and the C4 anti-rot extension).
+
+## Verdict
+
+**One new critical found in the patch itself; immediately fixed in follow-up commit. Recommend merge after that follow-up.**
+
+The 4 original criticals are properly addressed (verified end-to-end: code-reviewer ran the behavioral confirmation, gate orchestrator passes all 5 gates including the new scope-iteration). But the patch introduced a branch-exclusivity bug in the executor gate that the silent-failure-hunter caught.
+
+## New critical (from re-review)
+
+### C-NEW — Executor branch-exclusivity defeats fresh policy eval on warning-only pre-attached conflicts
+**Source:** silent-failure-hunter (Critical #1)
+**File:** `scripts/lib/install-executor.js:145–159`
+
+The patch wired `if (plan.conflicts.length > 0) { ... } else if (...) { evaluatePolicy(...) }`. If a caller pre-attaches `conflicts:[{severity:"warning"}]` (warnings only), branch 1 fires, `assertNoBlockingConflicts` passes (no error severity), and branch 2 **never runs**. A future caller that pre-stamps warning conflicts (e.g., from path-safety) silently bypasses the policy gate — exactly the silent-failure shape the patch claimed to close.
+
+**Fix applied (follow-up commit):** replaced if/else-if with a merged-list pattern — always run `evaluatePolicy` when settings are present, then concat with pre-attached conflicts, then single `assertNoBlockingConflicts({conflicts: allConflicts})`. Added a regression test (`applyInstallPlan fresh policy eval runs even when warning-only conflicts pre-attached`) that exercises the exact bypass shape.
+
+## Comment rot introduced by the patch (also fixed in follow-up)
+
+- `scripts/install-apply.js:154–157` — still described the executor gate as "re-asserts pre-attached conflicts" (old dead-code design). Rewritten to describe the actual self-enforcing semantics.
+- `scripts/lib/install-executor.js:137–138` — JSDoc described the dead first branch as normal flow. JSDoc rewritten to describe the merged-list pattern.
+- `docs/SELECTIVE-INSTALL-ARCHITECTURE.md` — "folds into a single sub-process" was misleading (the folding is internal to `validate-install-manifests.js`, not a gate-runner property). Rephrased to "spawns `validate-install-manifests.js`, which internally runs ..."
+
+## Important items deferred to V1.1 tech-debt
+
+| ID | Source | Topic |
+|---|---|---|
+| I-RE-1 | silent-failure | `--scope <flag>` swallows the next flag with misleading enum-validation error ("Unsupported scope: --json"). Detect `value.startsWith('--')` and emit a "missing value" diagnostic instead. |
+| I-RE-2 | silent-failure | Profile-default scope fires R3 silently. When `profileSettings.scope:"user"` and operator runs no `--scope` flag, R3 fires. No log differentiates operator-chose vs profile-default. Add a stderr line when scope source matters. |
+| I-RE-3 | silent-failure | `gatePolicyClean` treats "adapter doesn't support this scope" as policy violation. Distinguish "adapter-incompatible-scope" (skip) from "policy violation" (fail). |
+| I-RE-4 | test-analyzer | Zero CLI integration tests spawn `--scope user` to verify end-to-end (`tests/scripts/install-plan.test.js` + `install-apply.test.js` both have zero "scope" occurrences). Add CLI spawn tests for the happy path + the enum-validation error path + the missing-value error path. |
+| I-RE-5 | test-analyzer | `gatePolicyClean` scope-iteration loop is only covered via stubs; the real `for (const scope of POLICY_GATE_SCOPES)` execution path has no direct assertion. |
+| I-RE-6 | test-analyzer | Executor's 4 branches: only 1 covered by the new regression test. Legacy-mode no-op + happy-path-with-clean-policy untested. The new follow-up patch's regression test exercises the merged-list branch + an old branch — still doesn't cover legacy no-op. |
+
+These are all coverage gaps, not bugs. Bundled into the V1.1 plan's tech-debt track (T7) — append to `.claude/plan/17-05-2026-v1-1-track-plan.md`.
+
+## Suggestions (already-deferred items remain valid)
+
+The 15 suggestions from the first review (S1–S15) remain logged. Add:
+
+- S-RE-1 (test-analyzer): gate-list anti-rot regex is brittle to sentence rewording. Consider a more forgiving extractor.
+- S-RE-2 (silent-failure): `evaluatePolicy({}, ...)` empty-settings is a silent no-op. Low-priority warning log.
+
+## Per-agent counts (re-review)
+
+| Agent | Critical | Important | Suggestions |
+|---|---|---|---|
+| code-reviewer | 0 | 0 | 0 (approved) |
+| pr-test-analyzer | 2 | 2 | 1 |
+| silent-failure-hunter | 1 | 3 | 2 |
+| comment-analyzer | 2 | 1 | 1 |
+| **De-duplicated** | **1** | **6** | **2** |
+
+## Final action
+
+**Patch the C-NEW finding (done in this same session). Then the PR is mergeable.** The 6 important items + suggestion set live in the V1.1 tech-debt log; none represent current bugs.

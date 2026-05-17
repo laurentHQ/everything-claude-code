@@ -812,11 +812,11 @@ The promotion lifecycle is orthogonal to the per-install policy. A profile's
 helper `scripts/ecc-promote.js` only advances to `promoted` after a passing
 gates report from `scripts/ci/gate-profile-promotion.js`, which sequences five
 gates in order: `schema`, `snapshot`, `policy`, `secret-scan`, `round-trip`.
-The `schema` gate folds manifest schema validation and the semantic CI checks
-(`runProfileSettingsSemanticChecks` + `runProfilePromotionGateCheck`) into a
-single sub-process; the `policy` gate iterates every promoted profile across
-the full `(target x scope)` matrix; `round-trip` exercises install +
-uninstall via the integration test suite. CI wires this in
+The `schema` gate spawns `scripts/ci/validate-install-manifests.js`, which
+internally runs manifest schema validation plus `runProfileSettingsSemanticChecks`
+and `runProfilePromotionGateCheck`. The `policy` gate iterates every promoted
+profile across the full `(target x scope)` matrix. `round-trip` exercises
+install + uninstall via the integration test suite. CI wires this in
 `.github/workflows/profile-promotion.yml`.
 
 Cross-references: `docs/PROFILE-SAFETY-GUIDE.md` is the operator walkthrough,

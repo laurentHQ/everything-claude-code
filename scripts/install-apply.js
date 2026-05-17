@@ -152,9 +152,12 @@ function main() {
     }
 
     // T6: evaluate policy gates against the resolved request and refuse
-    // the install on any severity:"error" conflict. This is the primary
-    // CLI gate; install-executor.applyInstallPlan also re-asserts against
-    // any conflicts already attached to the plan as defense-in-depth.
+    // the install on any severity:"error" conflict. This is the CLI-side
+    // gate (operator-facing — emits [policy] stderr lines before throwing).
+    // install-executor.applyInstallPlan ALSO runs evaluatePolicy from
+    // scratch on every call, so programmatic callers that bypass this CLI
+    // are still gated. The duplicate evaluation is intentional: missing
+    // enforcement is far costlier than evaluating policy twice.
     const policyResult = evaluatePolicy(
       {
         selectedModules: plan.selectedModules || [],

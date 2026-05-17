@@ -437,6 +437,45 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('applyInstallPlan fresh policy eval runs even when warning-only conflicts pre-attached', () => {
+    // PR #3 re-review C-NEW regression guard. Earlier branch-exclusivity
+    // bug: if a caller pre-attached only severity:"warning" conflicts,
+    // branch 1 (assertNoBlockingConflicts) passed and branch 2
+    // (evaluatePolicy) never ran -- defeating the gate.
+    // The fix merges both sources before a single assertion.
+    const sourceRoot = createTempDir('install-executor-source-');
+    const homeDir = createTempDir('install-executor-home-');
+    try {
+      writeManifestSourceFixture(sourceRoot);
+      const plan = createManifestInstallPlan({
+        sourceRoot,
+        homeDir,
+        target: 'claude',
+        profileId: 'minimal',
+        scope: 'user',
+      });
+      plan.profileSettings = { ...(plan.profileSettings || {}), block_global_install: true };
+      // Pre-attach a warning-only conflict. Under the buggy old gate this
+      // would short-circuit assertion and skip the fresh policy eval that
+      // would have caught block_global_install + scope:user.
+      plan.conflicts = [{
+        destination: 'irrelevant',
+        reason: 'profile-conflict',
+        severity: 'warning',
+      }];
+
+      assert.throws(
+        () => applyInstallPlan(plan),
+        /install refused|global-install-blocked/i,
+        'fresh policy eval must run even when only warning-severity conflicts are pre-attached'
+      );
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'ecc', 'install-state.json')));
+    } finally {
+      cleanup(sourceRoot);
+      cleanup(homeDir);
+    }
+  })) passed++; else failed++;
+
   if (test('applyInstallPlan re-export applies a manifest plan and writes install state', () => {
     const sourceRoot = createTempDir('install-executor-source-');
     const homeDir = createTempDir('install-executor-home-');

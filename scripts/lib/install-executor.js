@@ -128,35 +128,42 @@ function createStatePreview(options) {
 }
 
 function applyInstallPlan(plan) {
-  // T6 self-enforcing gate: every caller of applyInstallPlan must clear
-  // the policy. The CLI (scripts/install-apply.js) also runs evaluatePolicy
-  // first; this is the second gate that catches programmatic callers who
-  // bypass the CLI. Duplicate work is acceptable; missing enforcement is not.
+  // T6 self-enforcing gate. Two independent things to assert before the
+  // install proceeds; both must pass:
+  //   (a) Fresh policy evaluation against profileSettings + selectedModules
+  //       (manifest-mode plans only — legacy plans predate profile settings
+  //       and have no settings to evaluate, so policy is a no-op for them).
+  //   (b) Any conflicts already attached to the plan by an upstream caller
+  //       (e.g., path-safety warnings, future external attachers) are
+  //       re-asserted as defense-in-depth.
   //
-  // Conditions:
-  //   - If plan.conflicts is already attached (caller evaluated policy
-  //     itself), trust + re-assert defense-in-depth.
-  //   - Otherwise, if the plan carries selectedModules or profileSettings
-  //     (manifest-mode plans from createManifestInstallPlan), run policy
-  //     against them.
-  //   - Legacy-mode plans (createLegacyInstallPlan / createLegacyCompatInstallPlan)
-  //     have neither field; policy is a no-op for them by design — legacy
-  //     installs predate profile-level settings.
-  if (plan && Array.isArray(plan.conflicts) && plan.conflicts.length > 0) {
-    const { assertNoBlockingConflicts } = require('./install/policy');
-    assertNoBlockingConflicts(plan);
-  } else if (plan && (plan.profileSettings || (Array.isArray(plan.selectedModules) && plan.selectedModules.length > 0))) {
-    const { evaluatePolicy, assertNoBlockingConflicts } = require('./install/policy');
-    const policyResult = evaluatePolicy(
+  // The two checks are independent. An earlier version of this code used
+  // an if/else-if that allowed warning-only pre-attached conflicts to
+  // bypass the fresh policy evaluation; the merged-list pattern below
+  // closes that gap by combining both sources before a single assertion.
+  if (!plan) {
+    const { applyInstallPlan: applyPlan } = require('./install/apply');
+    return applyPlan(plan);
+  }
+
+  const { evaluatePolicy, assertNoBlockingConflicts } = require('./install/policy');
+
+  const policyConflicts = (plan.profileSettings || (Array.isArray(plan.selectedModules) && plan.selectedModules.length > 0))
+    ? evaluatePolicy(
       {
         selectedModules: plan.selectedModules || [],
         includedComponentIds: plan.includedComponentIds || [],
         scope: plan.scope || null,
       },
       plan.profileSettings || null
-    );
-    assertNoBlockingConflicts(policyResult);
+    ).conflicts
+    : [];
+  const attachedConflicts = Array.isArray(plan.conflicts) ? plan.conflicts : [];
+  const allConflicts = [...attachedConflicts, ...policyConflicts];
+  if (allConflicts.length > 0) {
+    assertNoBlockingConflicts({ conflicts: allConflicts });
   }
+
   const { applyInstallPlan: applyPlan } = require('./install/apply');
   return applyPlan(plan);
 }
