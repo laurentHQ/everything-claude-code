@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { assertInsideAllowedRoot } = require('./path-safety');
+
 /**
  * Resolve the audit-log path based on profile-settings scope:
  *   scope === 'sandbox' -> <stateDir>/audit.jsonl
@@ -39,12 +41,20 @@ function appendAuditEvent(filePath, event) {
 /**
  * Convenience wrapper: only writes when settings.require_audit_log is true.
  * Returns the written filePath or null if not written.
+ *
+ * When `allowedRoots` is a non-empty array, the resolved audit path is asserted
+ * to live inside one of those roots before any write. This keeps the audit
+ * destination inside the same safety envelope that gates regular operations
+ * in scripts/lib/install/apply.js.
  */
-function maybeAppendAuditEvent({ settings, scope, stateDir, targetRoot, overridePath, event } = {}) {
+function maybeAppendAuditEvent({ settings, scope, stateDir, targetRoot, overridePath, allowedRoots, event } = {}) {
   if (!settings || settings.require_audit_log !== true) {
     return null;
   }
   const filePath = resolveAuditLogPath({ scope, stateDir, targetRoot, overridePath });
+  if (Array.isArray(allowedRoots) && allowedRoots.length > 0) {
+    assertInsideAllowedRoot(filePath, allowedRoots);
+  }
   appendAuditEvent(filePath, event);
   return filePath;
 }

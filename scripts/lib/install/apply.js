@@ -222,6 +222,7 @@ function applyInstallPlan(plan) {
       stateDir: plan.stateDir || null,
       targetRoot: plan.targetRoot,
       overridePath: plan.auditLogPath || null,
+      allowedRoots,
       event: {
         action: 'install-apply',
         profileId: request.profile || null,

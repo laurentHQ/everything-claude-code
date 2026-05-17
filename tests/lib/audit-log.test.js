@@ -150,6 +150,61 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('maybeAppendAuditEvent with allowedRoots accepts path inside root', () => {
+    const dir = createTempDir();
+    try {
+      const result = maybeAppendAuditEvent({
+        settings: { require_audit_log: true },
+        targetRoot: dir,
+        allowedRoots: [dir],
+        event: { action: 'install-apply' },
+      });
+      assert.strictEqual(result, path.join(dir, 'ecc', 'audit.jsonl'));
+      assert.ok(fs.existsSync(result));
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  if (test('maybeAppendAuditEvent with allowedRoots rejects override outside roots', () => {
+    const dir = createTempDir();
+    try {
+      const outside = path.join(os.tmpdir(), 'audit-escape', 'log.jsonl');
+      assert.throws(
+        () => maybeAppendAuditEvent({
+          settings: { require_audit_log: true },
+          targetRoot: dir,
+          allowedRoots: [dir],
+          overridePath: outside,
+          event: { action: 'install-apply' },
+        }),
+        /outside-allowed-root/,
+        'expected the safety contract substring in the thrown message'
+      );
+      assert.ok(!fs.existsSync(outside), 'no file should have been created when assertion fails');
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
+  if (test('maybeAppendAuditEvent with empty allowedRoots skips the check (opt-in)', () => {
+    const dir = createTempDir();
+    try {
+      const filePath = path.join(dir, 'plain.jsonl');
+      const result = maybeAppendAuditEvent({
+        settings: { require_audit_log: true },
+        targetRoot: dir,
+        allowedRoots: [],
+        overridePath: filePath,
+        event: { action: 'install-apply' },
+      });
+      assert.strictEqual(result, filePath);
+      assert.ok(fs.existsSync(filePath));
+    } finally {
+      cleanup(dir);
+    }
+  })) passed++; else failed++;
+
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);
 }

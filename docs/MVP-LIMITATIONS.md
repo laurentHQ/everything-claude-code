@@ -10,8 +10,10 @@ but are **NOT enforced at install/apply time**. Runtime enforcement lands in T6.
 | block_global_install: true | does NOT refuse `--scope user` | refuses `--scope user` with `global-install-blocked` error |
 | hook_profile: "validation" | hooks not classified or filtered | hook risk classification + default-deny on `high` |
 
-The pre-existing `ECC_DISABLED_MCPS` env-filter at `scripts/lib/install/apply.js:120,132,145`
-continues to apply unchanged in MVP.
+The pre-existing `ECC_DISABLED_MCPS` env-filter (parsed at the top of
+`applyInstallPlan` in `scripts/lib/install/apply.js` and consumed inside the
+`merge-json` and `copy-file` MCP dispatch handlers) continues to apply
+unchanged in MVP.
 
 What IS enforced in MVP:
 
@@ -25,5 +27,6 @@ What IS enforced in MVP:
   `resolveInstallPlan(...).profileSettings` return cloned settings objects
   so consumers (other tracks) can begin wiring without mutation risk.
 
-Tracks that will land runtime enforcement: T2 (typed operations), T3 (path
-safety + write scope), T5 (lifecycle gating), T6 (hook risk classifier).
+Runtime enforcement of the declarative settings above lands in T6 (deny-by-
+default policy gate, secret-shape scan, hook risk classification) and T7
+(promotion lifecycle / CI gating) — both deferred from the MVP cut.

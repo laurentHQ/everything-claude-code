@@ -164,6 +164,35 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('install succeeds and stderr-warns when audit-log append fails (EISDIR)', () => {
+    const tmp = createTempDir();
+    const origWrite = process.stderr.write.bind(process.stderr);
+    const captured = [];
+    process.stderr.write = (chunk) => {
+      captured.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+      return true;
+    };
+    try {
+      // Pre-create the audit-log path AS A DIRECTORY so fs.appendFileSync
+      // fails with EISDIR. The install must still succeed end-to-end.
+      const auditPath = path.join(tmp, '.claude', 'ecc', 'audit.jsonl');
+      fs.mkdirSync(path.dirname(auditPath), { recursive: true });
+      fs.mkdirSync(auditPath);
+
+      const plan = buildPlan({ tmpDir: tmp, requireAuditLog: true });
+      const result = applyInstallPlan(plan);
+
+      assert.strictEqual(result.applied, true, 'install must succeed even when audit-log write fails');
+      assert.ok(fs.existsSync(plan.installStatePath), 'install-state must be written');
+      assert.ok(fs.existsSync(plan.operations[0].destinationPath), 'operation destination must be written');
+      const stderr = captured.join('');
+      assert.ok(stderr.includes('[audit-log]'), `expected [audit-log] in stderr, got: ${stderr}`);
+    } finally {
+      process.stderr.write = origWrite;
+      cleanup(tmp);
+    }
+  })) passed++; else failed++;
+
   if (test('install then uninstall both append entries when audit-log enabled', () => {
     const tmp = createTempDir();
     try {

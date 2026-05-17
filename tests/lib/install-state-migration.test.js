@@ -100,6 +100,20 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('migrateInstallState v1->v2 is a pure schemaVersion bump (no field injection)', () => {
+    const v1 = buildValidV1State();
+    const migrated = migrateInstallState(v1);
+    // Migration must not inject v2-only optional fields (settings, backups).
+    // Those land via createInstallState when callers opt in.
+    assert.ok(!('settings' in migrated), 'settings must not be auto-injected by migration');
+    assert.ok(!('backups' in migrated), 'backups must not be auto-injected by migration');
+    // Every v1 key survives unchanged except schemaVersion.
+    const expected = { ...v1, schemaVersion: 'ecc.install.v2' };
+    assert.deepStrictEqual(migrated, expected);
+    // Original input is not mutated.
+    assert.strictEqual(v1.schemaVersion, 'ecc.install.v1');
+  })) passed++; else failed++;
+
   if (test('migrateInstallState is idempotent on v2 input', () => {
     const v2Input = { ...buildValidV1State(), schemaVersion: 'ecc.install.v2' };
     const migrated = migrateInstallState(v2Input);

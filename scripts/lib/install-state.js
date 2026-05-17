@@ -357,6 +357,18 @@ function assertValidInstallState(state, label) {
   }
 }
 
+/**
+ * Migrate an install-state document to the current SCHEMA_VERSION.
+ *   - v2 input: returned unchanged (identity).
+ *   - v1 input: shallow-clone with schemaVersion bumped to v2. v1 fields are
+ *     a strict subset of v2 (settings + backups are optional in v2), so no
+ *     other transform is needed.
+ *   - Unknown schemaVersion: warns to stderr and returns the input unchanged
+ *     so the downstream validator surfaces a "must equal ecc.install.v2"
+ *     error. The warning keeps the failure diagnosable when a future v3
+ *     state lands without an updated client.
+ *   - Non-object input: throws.
+ */
 function migrateInstallState(state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) {
     throw new Error('Cannot migrate install-state: input is not a JSON object');
@@ -370,9 +382,10 @@ function migrateInstallState(state) {
     return { ...state, schemaVersion: SCHEMA_VERSION };
   }
 
-  // Unknown / unsupported schemaVersion: leave as-is so the validator surfaces
-  // it through the normal "Invalid install-state" error path. Callers that
-  // want a hard error before validation can detect this case themselves.
+  process.stderr.write(
+    `[install-state] unknown schemaVersion ${JSON.stringify(state.schemaVersion)}; ` +
+    `known versions: ecc.install.v1, ${SCHEMA_VERSION}. Passing through; validator will reject.\n`
+  );
   return state;
 }
 

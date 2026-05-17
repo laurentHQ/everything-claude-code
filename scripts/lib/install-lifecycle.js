@@ -1183,12 +1183,17 @@ function uninstallInstalledStates(options = {}) {
 
       try {
         const settings = state.settings || null;
+        const adapter = record.adapter;
+        const allowedRoots = (adapter && typeof adapter.allowedRoots === 'function')
+          ? adapter.allowedRoots('apply', { targetRoot: state.target.root })
+          : [];
         maybeAppendAuditEvent({
           settings,
           scope: (settings && settings.scope) || null,
           stateDir: options.stateDir || null,
           targetRoot: state.target.root,
           overridePath: options.auditLogPath || null,
+          allowedRoots,
           event: {
             action: 'uninstall',
             profileId: (state.request && state.request.profile) || null,
