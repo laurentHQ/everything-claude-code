@@ -3038,6 +3038,7 @@ function runTests() {
     writeJson(path.join(testDir, 'manifests', 'install-profiles.json'), {
       version: 1,
       profiles: {
+        minimal: { description: 'Minimal', modules: ['rules-core'] },
         core: { description: 'Core', modules: ['rules-core'] },
         developer: { description: 'Developer', modules: ['rules-core', 'orchestration'] },
         security: { description: 'Security', modules: ['rules-core'] },
@@ -3073,7 +3074,7 @@ function runTests() {
       COMPONENTS_SCHEMA_PATH: componentsSchemaPath
     });
     assert.strictEqual(result.code, 0, `Should pass valid fixture, got stderr: ${result.stderr}`);
-    assert.ok(result.stdout.includes('Validated 2 install modules, 2 install components, and 5 profiles'),
+    assert.ok(result.stdout.includes('Validated 2 install modules, 2 install components, and 6 profiles'),
       'Should report validated install manifest counts');
     cleanupTestDir(testDir);
   })) passed++; else failed++;

@@ -74,6 +74,13 @@ const LEGACY_LANGUAGE_EXTRA_MODULE_IDS = Object.freeze({
   typescript: ['framework-language'],
 });
 
+function cloneJsonValue(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 function readJson(filePath, label) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -259,7 +266,18 @@ function listInstallProfiles(options = {}) {
     id,
     description: profile.description,
     moduleCount: Array.isArray(profile.modules) ? profile.modules.length : 0,
+    targets: Array.isArray(profile.targets) ? profile.targets.slice() : null,
+    settings: profile.settings ? cloneJsonValue(profile.settings) : null,
   }));
+}
+
+function getProfileSettings(profileId, options = {}) {
+  const manifests = loadInstallManifests(options);
+  const profile = manifests.profiles[profileId];
+  if (!profile) {
+    throw new Error(`Unknown install profile: ${profileId}`);
+  }
+  return profile.settings ? cloneJsonValue(profile.settings) : null;
 }
 
 function listInstallModules(options = {}) {
@@ -576,9 +594,14 @@ function resolveInstallPlan(options = {}) {
     })
     : null;
 
+  const profileSettings = profileId && manifests.profiles[profileId] && manifests.profiles[profileId].settings
+    ? cloneJsonValue(manifests.profiles[profileId].settings)
+    : null;
+
   return {
     repoRoot: manifests.repoRoot,
     profileId,
+    profileSettings,
     target,
     requestedModuleIds: effectiveRequestedIds,
     explicitModuleIds,
@@ -603,6 +626,7 @@ module.exports = {
   getManifestPaths,
   loadInstallManifests,
   getInstallComponent,
+  getProfileSettings,
   listInstallComponents,
   listLegacyCompatibilityLanguages,
   listInstallModules,

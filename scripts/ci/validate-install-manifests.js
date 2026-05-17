@@ -52,6 +52,50 @@ function validateSchema(ajv, schemaPath, data, label) {
   return false;
 }
 
+function runProfileSettingsSemanticChecks(profilesData) {
+  const errors = [];
+  if (!profilesData || typeof profilesData !== 'object') {
+    return errors;
+  }
+
+  const profiles = profilesData.profiles && typeof profilesData.profiles === 'object'
+    ? profilesData.profiles
+    : {};
+
+  for (const [profileId, profile] of Object.entries(profiles)) {
+    if (!profile || typeof profile !== 'object') {
+      continue;
+    }
+    const settings = profile.settings;
+    if (!settings || typeof settings !== 'object') {
+      continue;
+    }
+
+    if (settings.allow_mcp === true) {
+      const allowed = settings.allowed_mcp_servers;
+      if (!Array.isArray(allowed) || allowed.length === 0) {
+        errors.push(
+          `ERROR: Profile ${profileId}: allow_mcp:true requires non-empty allowed_mcp_servers`
+        );
+      }
+    }
+
+    if (settings.block_global_install === true && settings.scope === 'user') {
+      errors.push(
+        `ERROR: Profile ${profileId}: block_global_install:true is incompatible with scope:user`
+      );
+    }
+
+    if (settings.hook_profile === 'validation' && settings.require_audit_log !== true) {
+      errors.push(
+        `ERROR: Profile ${profileId}: hook_profile:validation requires require_audit_log:true`
+      );
+    }
+  }
+
+  return errors;
+}
+
 function validateInstallManifests() {
   if (!fs.existsSync(MODULES_MANIFEST_PATH) || !fs.existsSync(PROFILES_MANIFEST_PATH)) {
     console.log('Install manifests not found, skipping validation');
@@ -79,6 +123,14 @@ function validateInstallManifests() {
   hasErrors = validateSchema(ajv, PROFILES_SCHEMA_PATH, profilesData, 'install-profiles.json') || hasErrors;
   if (fs.existsSync(COMPONENTS_MANIFEST_PATH)) {
     hasErrors = validateSchema(ajv, COMPONENTS_SCHEMA_PATH, componentsData, 'install-components.json') || hasErrors;
+  }
+
+  const settingsCheckErrors = runProfileSettingsSemanticChecks(profilesData);
+  if (settingsCheckErrors.length > 0) {
+    for (const message of settingsCheckErrors) {
+      console.error(message);
+    }
+    hasErrors = true;
   }
 
   if (hasErrors) {
@@ -132,7 +184,7 @@ function validateInstallManifests() {
 
   const profiles = profilesData.profiles || {};
   const components = Array.isArray(componentsData.components) ? componentsData.components : [];
-  const expectedProfileIds = ['core', 'developer', 'security', 'research', 'full'];
+  const expectedProfileIds = ['minimal', 'core', 'developer', 'security', 'research', 'full'];
 
   for (const profileId of expectedProfileIds) {
     if (!profiles[profileId]) {
@@ -211,4 +263,10 @@ function validateInstallManifests() {
   );
 }
 
-validateInstallManifests();
+module.exports = {
+  runProfileSettingsSemanticChecks,
+};
+
+if (require.main === module) {
+  validateInstallManifests();
+}
