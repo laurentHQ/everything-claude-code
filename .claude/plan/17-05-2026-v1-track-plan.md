@@ -212,10 +212,17 @@ A fresh operator can complete the safe workflow (`plan` → `apply` in sandbox �
 - `docs/SELECTIVE-INSTALL-ARCHITECTURE.md` → add the safety/profile additions to the existing canonical doc. **Do not rename** — `scripts/release.sh:SELECTIVE_INSTALL_ARCHITECTURE_DOC` reads this path, and `docs/ANTIGRAVITY-GUIDE.md` links it.
 - `docs/SELECTIVE-INSTALL-DESIGN.md` → companion update.
 - `README.md` → add "Safe first run" section with `ecc plan --profile minimal --target claude --scope sandbox` walkthrough.
-- `docs/MVP-LIMITATIONS.md` → replace contents with a "limitations history" pointer to `PROFILE-SAFETY-GUIDE.md` or delete (decision in plan-review).
+- **Rename + repurpose** `docs/MVP-LIMITATIONS.md` → `docs/PROFILE-LIMITATIONS.md`. New contents: capability table — what IS enforced in v1, what is NOT, and which future cycle picks each up (target audience: release engineers, security reviewers, non-developer operators). Forbid line-number references in this file — capability/function/module names only, to prevent the rot that broke the MVP doc. Use as a single canonical "what's not supported yet" page. Initial v1.1-deferred list to populate:
+  - `document-ai` and `enterprise` profiles × `opencode` target snapshots
+  - Secondary harness adapters (`cursor`, `gemini`, `qwen`, `antigravity`, `codebuddy`, `joycode`) `allowedRoots` declarations + snapshots
+  - Hook risk classification beyond `safe / medium / high` (granular per-hook policy)
+  - MCP allowlist beyond `["context7", "github"]`
+  - Audit-log rotation
+  - T6 policy enforcement at `repair`-time
+  - Migration of `copy-path` → `copy-file` (canonical kind name convergence)
 
 #### Tests
-- `tests/docs/profile-safety-walkthrough.test.js` — assert the documented CLI commands resolve to real flags; assert documented conflict reasons match the enum in `schemas/install-plan.schema.json`.
+- `tests/docs/profile-safety-walkthrough.test.js` — assert the documented CLI commands resolve to real flags; assert documented conflict reasons match the enum in `schemas/install-plan.schema.json`; assert every "enforced" row in `docs/PROFILE-LIMITATIONS.md` maps to a real `conflicts[].reason` value, and every "deferred" row references a tracked v1.1 plan item (anti-rot guard).
 
 #### Exit criteria
 - Fresh-operator walkthrough completes without source-edits.
@@ -267,19 +274,14 @@ A proposed sequencing — the orchestrator may adjust dependencies.
 
 ---
 
-## Open Questions
+## Locked Decisions *(all open questions resolved before Wave 0)*
 
-*Resolved by the 2026-05-17 plan-review patches:*
-
-- ~~Render-template engine choice~~ — **locked: Mustache** (see T2-rest).
-- ~~CI workflow scope~~ — **confirmed: GitHub Actions** (existing `.github/workflows/` confirmed via plan-review grep; T7's workflow is additive).
-- ~~Fallback-validator strategy~~ — **locked: drop the fallback in W0/I10** and make `ajv` a hard dependency.
-- ~~T7 lifecycle storage location~~ — **locked: in-place manifest edit** via `scripts/lib/json-format.js`.
-
-*Still outstanding:*
-
-1. **`MVP-LIMITATIONS.md` end-state (T8).** Delete entirely once T6 ships, or rewrite as a "v1 limitations" doc enumerating v1.1 deferrals? Recommend rewrite — operators benefit from a single canonical "what's not enforced yet."
-2. **Coord-note correction.** Original MVP scope's coord note 3 referenced `scripts/lib/state-store/migrations.js` for the v1→v2 migration — that file is SQLite-only. MVP correctly placed the migration in `scripts/lib/install-state.js`. V1 plan-review should verify this is reflected in the V1 brief if the brief is regenerated.
+- **Render-template engine:** Mustache with `allowedKeys` context restriction (T2-rest).
+- **CI workflow scope:** GitHub Actions (existing `.github/workflows/` directory; T7's workflow is additive).
+- **Fallback-validator strategy:** drop the hand-rolled fallback in W0/I10; `ajv` becomes a hard dependency.
+- **T7 lifecycle storage:** in-place manifest edit via new `scripts/lib/json-format.js`.
+- **`MVP-LIMITATIONS.md` end-state:** rename to `docs/PROFILE-LIMITATIONS.md` and repurpose as the canonical "what is and isn't enforced in v1" page (T8 owns the rewrite). Forbid line-number references — capability/function/module names only, to prevent the rot that broke the MVP doc. A test in `tests/docs/profile-safety-walkthrough.test.js` asserts every "enforced" row in the doc maps to a real `conflicts[].reason` enum value, and every "deferred" row references a tracked v1.1 plan item.
+- **Coord-note correction (closed, no retroactive edit needed):** the MVP-scope brief's typo pointing at `scripts/lib/state-store/migrations.js` is recorded in the MVP status file's coord note 4. V1 does not introduce a new install-state schema migration, so the trap doesn't recur. **Process change for v1.1:** drop the two-document pattern (full plan + separate orchestrator scope brief); the V1 plan format here — single targeted track plan with embedded waves, locked decisions, and acceptance criteria — serves as both full plan and orchestrator brief, eliminating the divergence surface that produced the MVP typo.
 
 ---
 
@@ -302,6 +304,7 @@ A proposed sequencing — the orchestrator may adjust dependencies.
 [ ] gate-profile-promotion.js refuses to mark a profile "promoted" with any failing prerequisite (T7)
 [ ] ecc promote <id> --to <state> rewrites manifests/install-profiles.json in place via scripts/lib/json-format.js (T7)
 [ ] docs/PROFILE-SAFETY-GUIDE.md walkthrough passes its own test (T8)
+[ ] docs/PROFILE-LIMITATIONS.md (renamed from MVP-LIMITATIONS.md) lists every v1.1-deferred capability; anti-rot test maps each row to a real enum value or tracked plan item (T8)
 [ ] node tests/run-all.js green; no per-wave regression
 ```
 
