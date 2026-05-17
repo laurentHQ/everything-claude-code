@@ -3149,6 +3149,98 @@ function runTests() {
     cleanupTestDir(testDir);
   })) passed++; else failed++;
 
+  // ==========================================
+  // T7: runProfilePromotionGateCheck
+  // ==========================================
+  console.log('\nrunProfilePromotionGateCheck (T7):');
+
+  const {
+    runProfilePromotionGateCheck,
+  } = require(path.join(repoRoot, 'scripts', 'ci', 'validate-install-manifests.js'));
+
+  if (test('returns no errors when no profile is promoted (gate skipped)', () => {
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'draft' } },
+        core: { settings: { lifecycle: 'candidate' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, {
+      gatesReportPath: '/nonexistent/path/gates-report.json',
+    });
+    assert.deepStrictEqual(errors, []);
+  })) passed++; else failed++;
+
+  if (test('emits error for promoted profile when gates-report.json is missing', () => {
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'promoted' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, {
+      gatesReportPath: '/definitely/does/not/exist/gates-report.json',
+    });
+    assert.strictEqual(errors.length, 1, `expected 1 error, got ${errors.length}: ${errors.join(', ')}`);
+    assert.ok(errors[0].includes('Profile minimal'));
+    assert.ok(errors[0].includes('lifecycle:"promoted"'));
+    assert.ok(errors[0].includes('gates-report.json'));
+  })) passed++; else failed++;
+
+  if (test('returns no errors when gates-report.json passes', () => {
+    const testDir = createTestDir();
+    const reportPath = path.join(testDir, 'gates-report.json');
+    writeJson(reportPath, {
+      generatedAt: new Date().toISOString(),
+      gates: [
+        { gate: 'schema', status: 'pass' },
+        { gate: 'snapshot', status: 'pass' },
+        { gate: 'policy', status: 'pass' },
+        { gate: 'secret-scan', status: 'pass' },
+        { gate: 'round-trip', status: 'pass' },
+      ],
+      passed: true,
+    });
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'promoted' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, { gatesReportPath: reportPath });
+    assert.deepStrictEqual(errors, []);
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
+  if (test('emits errors with failing gate names when gates-report.json fails', () => {
+    const testDir = createTestDir();
+    const reportPath = path.join(testDir, 'gates-report.json');
+    writeJson(reportPath, {
+      generatedAt: new Date().toISOString(),
+      gates: [
+        { gate: 'schema', status: 'pass' },
+        { gate: 'snapshot', status: 'fail', detail: 'mismatch' },
+        { gate: 'policy', status: 'pass' },
+        { gate: 'secret-scan', status: 'fail', detail: 'shape detected' },
+        { gate: 'round-trip', status: 'pass' },
+      ],
+      passed: false,
+    });
+    const profilesData = {
+      profiles: {
+        minimal: { settings: { lifecycle: 'promoted' } },
+        core: { settings: { lifecycle: 'promoted' } },
+      },
+    };
+    const errors = runProfilePromotionGateCheck(profilesData, { gatesReportPath: reportPath });
+    assert.strictEqual(errors.length, 2, `expected 2 errors, got ${errors.length}`);
+    for (const err of errors) {
+      assert.ok(err.includes('failing gates'),
+        `expected error to mention failing gates: ${err}`);
+      assert.ok(err.includes('snapshot') && err.includes('secret-scan'),
+        `expected failing gate names listed: ${err}`);
+    }
+    cleanupTestDir(testDir);
+  })) passed++; else failed++;
+
   // Summary
   console.log(`\nResults: Passed: ${passed}, Failed: ${failed}`);
   process.exit(failed > 0 ? 1 : 0);

@@ -1,0 +1,29 @@
+name: profile-promotion
+
+on:
+  pull_request:
+    paths:
+      - 'manifests/install-profiles.json'
+      - 'scripts/lib/install/policy.js'
+      - 'scripts/ci/scan-secret-shapes.js'
+      - 'scripts/ci/gate-profile-promotion.js'
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --no-audit --no-fund || yarn install --frozen-lockfile
+      - name: Run promotion gate orchestrator
+        run: node scripts/ci/gate-profile-promotion.js --report gates-report.json
+      - name: Validate manifests (consumes gates-report.json)
+        run: node scripts/ci/validate-install-manifests.js
+      - name: Upload gates report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-report
+          path: gates-report.json
