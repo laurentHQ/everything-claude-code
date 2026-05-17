@@ -473,6 +473,8 @@ This keeps the agent focused and safer.
 
 You can replace the beginning of the previous spec with this:
 
+[Deployment_Specification.md]
+
 ```markdown
 # Deployment Specification: Profile-Based Agent Harness Installation in Isolated Environments
 

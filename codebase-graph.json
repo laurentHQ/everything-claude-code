@@ -1,0 +1,2177 @@
+{
+  "metadata": {
+    "repo": "everything-claude-code",
+    "repo_type": "hybrid",
+    "description": "Claude Code plugin (ECC) — agents, skills, hooks, rules, commands, MCP configs, and install runtime spanning JavaScript hook scripts, Python LLM provider module, and a Rust session daemon (ecc2).",
+    "generated_at": "2026-05-17",
+    "approach": "Hybrid 3-layer: full Service→Module→File hierarchy for both code and docs; selective Function/Class nodes only for core entrypoints in the JS install runtime, Python LLM CLI, and Rust ecc2 binary."
+  },
+  "nodes": [
+    {
+      "id": "workflow_plugin_install",
+      "type": "Workflow",
+      "label": "Plugin Installation Workflow",
+      "description": "User runs install.sh or `ecc install` to plan and apply an install profile (minimal/core/developer/security/full) into a target harness (Claude home, Cursor project, Codex home, Gemini, OpenCode, Qwen, etc.). Modules expand into components which deposit files at target paths.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_hook_lifecycle",
+      "type": "Workflow",
+      "label": "Tool-Use Hook Lifecycle",
+      "description": "Claude Code emits tool events (PreToolUse, PostToolUse, Stop, SessionStart, SessionEnd, PreCompact) which fan out through plugin-hook-bootstrap and dispatcher scripts (pre-bash-dispatcher, post-bash-dispatcher) into focused hook handlers, all gated by run-with-flags using ECC_HOOK_PROFILE.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_tdd",
+      "type": "Workflow",
+      "label": "TDD Workflow",
+      "description": "User invokes /tdd; the tdd-workflow skill, tdd-guide agent, and post-edit-typecheck/post-edit-format hooks coordinate red-green-refactor cycles enforced by quality-gate and stop-format-typecheck hooks.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_code_review",
+      "type": "Workflow",
+      "label": "Code Review Workflow",
+      "description": "User invokes /code-review; the code-reviewer agent (plus language-specific reviewers such as cpp-reviewer, csharp-reviewer, django-reviewer) consults rules/code-review.md and language rules to produce a structured review.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_feature_dev",
+      "type": "Workflow",
+      "label": "Feature Development Workflow",
+      "description": "User invokes /feature-dev or /plan; the architect/code-architect/code-explorer agents collaborate with the feature-development skill to draft a plan, then implementation is driven by tdd-workflow and verified by code-review.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_session_management",
+      "type": "Workflow",
+      "label": "Session Management Workflow",
+      "description": "session-start, session-end, session-activity-tracker hooks plus the Rust ecc2 daemon and Node sessions-cli persist conversation state, store metrics, and surface them via statusline and operator-readiness dashboards.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_cross_harness_adapt",
+      "type": "Workflow",
+      "label": "Cross-Harness Adaptation",
+      "description": "Install targets in scripts/lib/install-targets translate canonical ECC components into harness-specific layouts (.claude, .cursor, .codex, .gemini, .opencode, .qwen, .codebuddy, .kiro, .trae). harness-adapter-compliance and gemini-adapt-agents normalize content per harness.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_ci_validation",
+      "type": "Workflow",
+      "label": "CI Validation Workflow",
+      "description": "GitHub Actions run scripts/ci/validate-* (agents, commands, hooks, skills, rules, install-manifests, workflow-security, no-personal-paths, unicode-safety) plus scan-supply-chain-iocs to gate PRs.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_skill_invocation",
+      "type": "Workflow",
+      "label": "Skill Discovery & Invocation",
+      "description": "Skills under skills/ (~230) and .claude/skills are surfaced to Claude via the Skill tool; some are gated by hookify-rules / skill-comply; outputs of /skill-create flow through scripts/skill-create-output.js.",
+      "inferred": false
+    },
+    {
+      "id": "workflow_llm_provider_selection",
+      "type": "Workflow",
+      "label": "LLM Provider Selection",
+      "description": "User runs `python -m llm`; cli/selector lists providers (Claude, OpenAI, Ollama, AstraFlow), the resolver instantiates one, prompt/builder applies templates, tools/executor runs tool calls.",
+      "inferred": false
+    },
+
+    {
+      "id": "concept_plugin_manifest",
+      "type": "Concept",
+      "label": "Plugin Manifest & Marketplace",
+      "description": ".claude-plugin/plugin.json and marketplace.json describe the plugin to Claude Code; the schema lives in schemas/plugin.schema.json.",
+      "inferred": false
+    },
+    {
+      "id": "concept_install_profiles",
+      "type": "Concept",
+      "label": "Install Profiles, Modules, Components",
+      "description": "Profiles (minimal/core/developer/security/full) compose Modules which expand to Components — declared in manifests/ and validated against schemas/install-*.schema.json.",
+      "inferred": false
+    },
+    {
+      "id": "concept_harness_adapter",
+      "type": "Concept",
+      "label": "Harness Adapter",
+      "description": "An abstraction that maps canonical ECC artifacts (agents/skills/commands/hooks/rules) onto the on-disk layout each agentic harness expects (Claude Code, Cursor, Codex, Gemini, OpenCode, Qwen, CodeBuddy, Kiro, Trae, Antigravity, JoyCode).",
+      "inferred": false
+    },
+    {
+      "id": "concept_agent",
+      "type": "Concept",
+      "label": "Agent",
+      "description": "Markdown file with YAML frontmatter (name, description, tools, model) representing a delegatable subagent (architect, code-reviewer, tdd-guide, …).",
+      "inferred": false
+    },
+    {
+      "id": "concept_skill",
+      "type": "Concept",
+      "label": "Skill",
+      "description": "Reusable workflow/domain knowledge unit with When-to-Use / How-It-Works / Examples sections, invoked via the Skill tool.",
+      "inferred": false
+    },
+    {
+      "id": "concept_command",
+      "type": "Concept",
+      "label": "Slash Command",
+      "description": "User-invoked command (/tdd, /plan, /e2e, /code-review, …) implemented as a markdown prompt with a description frontmatter line.",
+      "inferred": false
+    },
+    {
+      "id": "concept_hook",
+      "type": "Concept",
+      "label": "Hook",
+      "description": "JSON-declared automation triggered by Claude Code tool events; runs Node scripts (and one Python wrapper) gated by run-with-flags / ECC_HOOK_PROFILE / ECC_DISABLED_HOOKS.",
+      "inferred": false
+    },
+    {
+      "id": "concept_rule",
+      "type": "Concept",
+      "label": "Rule",
+      "description": "Always-follow guideline file under rules/ — split into common cross-cutting rules and per-language rule packs.",
+      "inferred": false
+    },
+    {
+      "id": "concept_mcp_config",
+      "type": "Concept",
+      "label": "MCP Server Configuration",
+      "description": "Declarative MCP server wiring (.mcp.json, mcp-configs/mcp-servers.json) merged per-harness via scripts/codex/merge-mcp-config.js and scripts/lib/mcp-config.js.",
+      "inferred": false
+    },
+    {
+      "id": "concept_session_state",
+      "type": "Concept",
+      "label": "Session State & Observability",
+      "description": "Per-conversation state (activity, costs, tool usage) captured by Node hooks and the Rust ecc2 daemon, exposed via ecc-statusline, operator-readiness-dashboard, and observability-readiness reports.",
+      "inferred": false
+    },
+    {
+      "id": "concept_security_baseline",
+      "type": "Concept",
+      "label": "Prompt-Defense & Supply-Chain Baseline",
+      "description": "Repeating Prompt Defense Baseline included in CLAUDE.md and rule files, plus scripts/ci/scan-supply-chain-iocs.js, security-review skill, gateguard-fact-force hook, and SECURITY.md.",
+      "inferred": false
+    },
+    {
+      "id": "concept_quality_gate",
+      "type": "Concept",
+      "label": "Quality Gate",
+      "description": "Pre-commit / pre-push / post-edit checks: commit-quality, no-verify block, console.log warn, format, typecheck — coordinated by quality-gate.js and stop-format-typecheck.js.",
+      "inferred": false
+    },
+    {
+      "id": "concept_llm_provider",
+      "type": "Concept",
+      "label": "LLM Provider Abstraction",
+      "description": "Pluggable LLM backend interface (src/llm/core/interface.py) with provider implementations for Claude, OpenAI, Ollama, AstraFlow and a runtime resolver.",
+      "inferred": false
+    },
+    {
+      "id": "concept_tdd",
+      "type": "Concept",
+      "label": "Test-Driven Development",
+      "description": "Red-green-refactor discipline encoded in the tdd-workflow skill, tdd-guide agent, language-specific *-tdd skills, and verified by post-edit hooks.",
+      "inferred": false
+    },
+    {
+      "id": "concept_test_validation",
+      "type": "Concept",
+      "label": "Test & Validation Harness",
+      "description": "Repository test suite (tests/run-all.js) covering JS hooks/lib/scripts, plus Python tests for the llm module and CI validators for agents/commands/skills/hooks/rules/manifests.",
+      "inferred": false
+    },
+
+    {
+      "id": "service_plugin",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Plugin Manifest Service",
+      "path": ".claude-plugin/",
+      "description": "Plugin and marketplace manifests consumed by Claude Code to register ECC.",
+      "inferred": false
+    },
+    {
+      "id": "service_agents",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Agents Service",
+      "path": "agents/",
+      "description": "Catalog of ~60 markdown agent definitions (canonical) plus .agents/ for harness-specific variants.",
+      "inferred": false
+    },
+    {
+      "id": "service_skills",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Skills Service",
+      "path": "skills/",
+      "description": "~230 skill directories grouped by domain (engineering, security, design, ops, language-specific).",
+      "inferred": false
+    },
+    {
+      "id": "service_commands",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Commands Service",
+      "path": "commands/",
+      "description": "Slash command markdown files plus legacy-command-shims/commands forwarding deprecated names.",
+      "inferred": false
+    },
+    {
+      "id": "service_hooks_config",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Hooks Configuration",
+      "path": "hooks/",
+      "description": "hooks.json declaring all PreToolUse/PostToolUse/SessionStart/Stop/PreCompact wiring and the memory-persistence subdirectory.",
+      "inferred": false
+    },
+    {
+      "id": "service_scripts",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Scripts Runtime",
+      "path": "scripts/",
+      "description": "Node runtime — hook handlers (scripts/hooks), helper libraries (scripts/lib), install pipeline, CI validators, codex/codex-git-hooks adapters, codemaps utilities.",
+      "inferred": false
+    },
+    {
+      "id": "service_rules",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Rules Service",
+      "path": "rules/",
+      "description": "Common rules plus per-language rule packs (python, typescript, golang, rust, java, kotlin, swift, php, ruby, …).",
+      "inferred": false
+    },
+    {
+      "id": "service_mcp",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "MCP Config Service",
+      "path": "mcp-configs/",
+      "description": "MCP server definitions (mcp-servers.json) plus root .mcp.json.",
+      "inferred": false
+    },
+    {
+      "id": "service_manifests",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Install Manifests Service",
+      "path": "manifests/",
+      "description": "Profile / module / component manifests consumed by the install pipeline.",
+      "inferred": false
+    },
+    {
+      "id": "service_schemas",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Schemas Service",
+      "path": "schemas/",
+      "description": "JSON Schemas for plugin, hooks, install manifests/state, package-manager, provenance.",
+      "inferred": false
+    },
+    {
+      "id": "service_llm",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Python LLM Module",
+      "path": "src/llm/",
+      "description": "Provider-agnostic LLM CLI with core interface, multiple provider adapters, tool executor, and prompt builder.",
+      "inferred": false
+    },
+    {
+      "id": "service_ecc2",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "ecc2 Rust Daemon",
+      "path": "ecc2/",
+      "description": "Rust binary providing session daemon, worktree orchestration, TUI dashboard, notifications, observability.",
+      "inferred": false
+    },
+    {
+      "id": "service_docs",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Documentation",
+      "path": "docs/",
+      "description": "Architecture, business, examples, fixes, releases, security docs plus localized README variants and several long-form guides at the repo root (README.md, the-longform-guide.md, the-shortform-guide.md, the-security-guide.md, WORKING-CONTEXT.md).",
+      "inferred": false
+    },
+    {
+      "id": "service_tests",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Test Suite",
+      "path": "tests/",
+      "description": "Mixed JS (tests/lib, tests/hooks, tests/scripts, tests/integration, tests/docs, tests/commands, tests/ci) and Python (test_*.py) tests with run-all.js orchestrator and conftest.py.",
+      "inferred": false
+    },
+    {
+      "id": "service_harness_layouts",
+      "type": "Service",
+      "technical_level": "service",
+      "label": "Harness Layout Mirrors",
+      "path": "(.claude/, .cursor/, .codex/, .gemini/, .opencode/, .qwen/, .codebuddy/, .kiro/, .trae/, .agents/, .codex-plugin/, plugins/)",
+      "description": "Per-harness directories holding harness-native equivalents of agents/skills/commands/hooks/rules, produced by install-targets.",
+      "inferred": false
+    },
+
+    {
+      "id": "module_scripts_hooks",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "scripts/hooks",
+      "path": "scripts/hooks/",
+      "description": "Hook handler scripts (pre/post bash dispatchers, edit/write hooks, session hooks, quality-gate, observer-runner, gateguard, doc-file-warning, run-with-flags wrapper).",
+      "inferred": false
+    },
+    {
+      "id": "module_scripts_lib",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "scripts/lib",
+      "path": "scripts/lib/",
+      "description": "Shared libraries: utils, package-manager, install-executor/lifecycle/manifests/state, install-targets, session-manager, hook-flags, mcp-config, shell helpers, state-store.",
+      "inferred": false
+    },
+    {
+      "id": "module_scripts_ci",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "scripts/ci",
+      "path": "scripts/ci/",
+      "description": "CI validators (agents/commands/hooks/skills/rules/install-manifests/workflow-security/no-personal-paths/unicode-safety) and supply-chain IOC scanner.",
+      "inferred": false
+    },
+    {
+      "id": "module_scripts_codex",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "scripts/codex",
+      "path": "scripts/codex/",
+      "description": "Codex-specific merge utilities for codex config and MCP config.",
+      "inferred": false
+    },
+    {
+      "id": "module_install_targets",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "scripts/lib/install-targets",
+      "path": "scripts/lib/install-targets/",
+      "description": "Harness-specific install target implementations (claude-home, cursor-project, codex-home, gemini-project, opencode-home, qwen-home, codebuddy-project, antigravity-project, joycode-project) plus registry and helpers.",
+      "inferred": false
+    },
+    {
+      "id": "module_llm_core",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "src/llm/core",
+      "path": "src/llm/core/",
+      "description": "Provider interface and shared types.",
+      "inferred": false
+    },
+    {
+      "id": "module_llm_providers",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "src/llm/providers",
+      "path": "src/llm/providers/",
+      "description": "Concrete LLM providers (claude, openai, ollama, astraflow) plus resolver.",
+      "inferred": false
+    },
+    {
+      "id": "module_llm_cli",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "src/llm/cli",
+      "path": "src/llm/cli/",
+      "description": "Interactive CLI selector.",
+      "inferred": false
+    },
+    {
+      "id": "module_llm_prompt",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "src/llm/prompt",
+      "path": "src/llm/prompt/",
+      "description": "Prompt builder and template assets.",
+      "inferred": false
+    },
+    {
+      "id": "module_llm_tools",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "src/llm/tools",
+      "path": "src/llm/tools/",
+      "description": "Tool-call executor used by providers.",
+      "inferred": false
+    },
+    {
+      "id": "module_ecc2_session",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "ecc2/src/session",
+      "path": "ecc2/src/session/",
+      "description": "Session daemon, runtime, manager, output, store.",
+      "inferred": false
+    },
+    {
+      "id": "module_ecc2_tui",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "ecc2/src/tui",
+      "path": "ecc2/src/tui/",
+      "description": "Ratatui-style dashboard app and widgets.",
+      "inferred": false
+    },
+    {
+      "id": "module_ecc2_misc",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "ecc2/src/{comms,config,notifications,observability,worktree}",
+      "path": "ecc2/src/",
+      "description": "Cross-cutting ecc2 modules.",
+      "inferred": false
+    },
+    {
+      "id": "module_rules_common",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "rules (common)",
+      "path": "rules/",
+      "description": "Common rule files: agents, code-review, coding-style, development-workflow, git-workflow, hooks, patterns, performance, security, testing.",
+      "inferred": false
+    },
+    {
+      "id": "module_rules_languages",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "rules (language packs)",
+      "path": "rules/{python,typescript,golang,java,kotlin,rust,swift,php,ruby,csharp,cpp,dart,fsharp,angular,perl,arkts,web,zh}/",
+      "description": "Per-language rule subdirectories applied via skill/rule lookup.",
+      "inferred": false
+    },
+    {
+      "id": "module_docs_architecture",
+      "type": "Module",
+      "technical_level": "module",
+      "label": "docs/architecture",
+      "path": "docs/architecture/",
+      "description": "Architecture docs: cross-harness, harness-adapter-compliance, observability-readiness, hud-status-session-control, progress-sync-contract, evaluator-rag-prototype, agentshield-enterprise-research-roadmap.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_plugin_json",
+      "type": "File",
+      "technical_level": "file",
+      "label": ".claude-plugin/plugin.json",
+      "file": ".claude-plugin/plugin.json",
+      "description": "Plugin manifest declaring name=ecc, version 2.0.0-rc.1, skill/command roots.",
+      "inferred": false
+    },
+    {
+      "id": "file_marketplace_json",
+      "type": "File",
+      "technical_level": "file",
+      "label": ".claude-plugin/marketplace.json",
+      "file": ".claude-plugin/marketplace.json",
+      "description": "Marketplace metadata.",
+      "inferred": false
+    },
+    {
+      "id": "file_plugin_schema",
+      "type": "File",
+      "technical_level": "file",
+      "label": "schemas/plugin.schema.json",
+      "file": "schemas/plugin.schema.json",
+      "description": "JSON Schema for plugin.json.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_profiles",
+      "type": "File",
+      "technical_level": "file",
+      "label": "manifests/install-profiles.json",
+      "file": "manifests/install-profiles.json",
+      "description": "Profile→module mapping (minimal/core/developer/security/full).",
+      "inferred": false
+    },
+    {
+      "id": "file_install_modules",
+      "type": "File",
+      "technical_level": "file",
+      "label": "manifests/install-modules.json",
+      "file": "manifests/install-modules.json",
+      "description": "Module→component mapping.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_components",
+      "type": "File",
+      "technical_level": "file",
+      "label": "manifests/install-components.json",
+      "file": "manifests/install-components.json",
+      "description": "Component definitions (source paths, target placement).",
+      "inferred": false
+    },
+    {
+      "id": "file_install_sh",
+      "type": "File",
+      "technical_level": "file",
+      "label": "install.sh",
+      "file": "install.sh",
+      "description": "POSIX install bootstrap.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_ps1",
+      "type": "File",
+      "technical_level": "file",
+      "label": "install.ps1",
+      "file": "install.ps1",
+      "description": "Windows PowerShell install bootstrap.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_plan_js",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/install-plan.js",
+      "file": "scripts/install-plan.js",
+      "description": "Generates a planned set of file operations for a chosen profile.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_apply_js",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/install-apply.js",
+      "file": "scripts/install-apply.js",
+      "description": "Applies a planned install onto a target harness.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_executor",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-executor.js",
+      "file": "scripts/lib/install-executor.js",
+      "description": "Executes individual install operations (copy, merge, etc.).",
+      "inferred": false
+    },
+    {
+      "id": "file_install_lifecycle",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-lifecycle.js",
+      "file": "scripts/lib/install-lifecycle.js",
+      "description": "Pre/post lifecycle phases for installation.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_manifests_lib",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-manifests.js",
+      "file": "scripts/lib/install-manifests.js",
+      "description": "Loads and validates manifest JSON.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_state",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-state.js",
+      "file": "scripts/lib/install-state.js",
+      "description": "Persistent install state for idempotent re-installs and uninstall.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_targets_registry",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/registry.js",
+      "file": "scripts/lib/install-targets/registry.js",
+      "description": "Registry mapping target names to harness adapter modules.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_target_claude",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/claude-home.js",
+      "file": "scripts/lib/install-targets/claude-home.js",
+      "description": "Claude Code home harness layout adapter.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_target_cursor",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/cursor-project.js",
+      "file": "scripts/lib/install-targets/cursor-project.js",
+      "description": "Cursor project layout adapter.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_target_codex",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/codex-home.js",
+      "file": "scripts/lib/install-targets/codex-home.js",
+      "description": "Codex home layout adapter.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_target_gemini",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/gemini-project.js",
+      "file": "scripts/lib/install-targets/gemini-project.js",
+      "description": "Gemini project layout adapter.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_target_opencode",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/opencode-home.js",
+      "file": "scripts/lib/install-targets/opencode-home.js",
+      "description": "OpenCode home layout adapter.",
+      "inferred": false
+    },
+    {
+      "id": "file_install_target_qwen",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/install-targets/qwen-home.js",
+      "file": "scripts/lib/install-targets/qwen-home.js",
+      "description": "Qwen home layout adapter.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc_js",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ecc.js",
+      "file": "scripts/ecc.js",
+      "description": "Top-level `ecc` CLI dispatcher.",
+      "inferred": false
+    },
+    {
+      "id": "file_doctor",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/doctor.js",
+      "file": "scripts/doctor.js",
+      "description": "Environment / installation health diagnostics.",
+      "inferred": false
+    },
+    {
+      "id": "file_repair",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/repair.js",
+      "file": "scripts/repair.js",
+      "description": "Repairs broken install state.",
+      "inferred": false
+    },
+    {
+      "id": "file_uninstall",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/uninstall.js",
+      "file": "scripts/uninstall.js",
+      "description": "Reverses an install using stored state.",
+      "inferred": false
+    },
+    {
+      "id": "file_list_installed",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/list-installed.js",
+      "file": "scripts/list-installed.js",
+      "description": "Lists installed components on a target.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_hooks_json",
+      "type": "File",
+      "technical_level": "file",
+      "label": "hooks/hooks.json",
+      "file": "hooks/hooks.json",
+      "description": "Master hook wiring consumed by Claude Code; every entry routes through plugin-hook-bootstrap then run-with-flags.",
+      "inferred": false
+    },
+    {
+      "id": "file_plugin_hook_bootstrap",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/plugin-hook-bootstrap.js",
+      "file": "scripts/hooks/plugin-hook-bootstrap.js",
+      "description": "Resolves CLAUDE_PLUGIN_ROOT across plugin install variants then delegates to the requested hook script.",
+      "inferred": false
+    },
+    {
+      "id": "file_run_with_flags",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/run-with-flags.js",
+      "file": "scripts/hooks/run-with-flags.js",
+      "description": "Reads stdin, applies ECC_HOOK_PROFILE / ECC_DISABLED_HOOKS gating, and dispatches to the underlying hook script's run().",
+      "inferred": false
+    },
+    {
+      "id": "file_pre_bash_dispatcher",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/pre-bash-dispatcher.js",
+      "file": "scripts/hooks/pre-bash-dispatcher.js",
+      "description": "Consolidated PreToolUse Bash dispatcher for commit-quality, no-verify, dev-server-block, tmux-reminder, git-push-reminder, gateguard.",
+      "inferred": false
+    },
+    {
+      "id": "file_post_bash_dispatcher",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/post-bash-dispatcher.js",
+      "file": "scripts/hooks/post-bash-dispatcher.js",
+      "description": "Consolidated PostToolUse Bash dispatcher for command-log, build-complete, PR-created.",
+      "inferred": false
+    },
+    {
+      "id": "file_session_start",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/session-start.js",
+      "file": "scripts/hooks/session-start.js",
+      "description": "SessionStart hook — injects superpowers, MCP-server instructions, skill list, and current date context.",
+      "inferred": false
+    },
+    {
+      "id": "file_session_end",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/session-end.js",
+      "file": "scripts/hooks/session-end.js",
+      "description": "SessionEnd hook — flushes session metrics and end marker.",
+      "inferred": false
+    },
+    {
+      "id": "file_session_activity_tracker",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/session-activity-tracker.js",
+      "file": "scripts/hooks/session-activity-tracker.js",
+      "description": "Records every tool use into the per-session activity store.",
+      "inferred": false
+    },
+    {
+      "id": "file_quality_gate",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/quality-gate.js",
+      "file": "scripts/hooks/quality-gate.js",
+      "description": "Aggregates lint/format/typecheck signals for post-edit gating.",
+      "inferred": false
+    },
+    {
+      "id": "file_stop_format_typecheck",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/stop-format-typecheck.js",
+      "file": "scripts/hooks/stop-format-typecheck.js",
+      "description": "Stop hook ensuring formatter+typecheck run before declaring completion.",
+      "inferred": false
+    },
+    {
+      "id": "file_post_edit_format",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/post-edit-format.js",
+      "file": "scripts/hooks/post-edit-format.js",
+      "description": "Formats edited files using detected formatter.",
+      "inferred": false
+    },
+    {
+      "id": "file_post_edit_typecheck",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/post-edit-typecheck.js",
+      "file": "scripts/hooks/post-edit-typecheck.js",
+      "description": "Runs type checker after edits.",
+      "inferred": false
+    },
+    {
+      "id": "file_block_no_verify",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/block-no-verify.js",
+      "file": "scripts/hooks/block-no-verify.js",
+      "description": "Blocks `--no-verify` on commit/push commands.",
+      "inferred": false
+    },
+    {
+      "id": "file_observe_runner",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/observe-runner.js",
+      "file": "scripts/hooks/observe-runner.js",
+      "description": "Async PreToolUse observer recording tool usage for continuous learning.",
+      "inferred": false
+    },
+    {
+      "id": "file_gateguard",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/gateguard-fact-force.js",
+      "file": "scripts/hooks/gateguard-fact-force.js",
+      "description": "Enforces fact-grounded responses for sensitive actions.",
+      "inferred": false
+    },
+    {
+      "id": "file_pre_compact",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/pre-compact.js",
+      "file": "scripts/hooks/pre-compact.js",
+      "description": "PreCompact hook — preserves critical session state before compaction.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc_statusline",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/ecc-statusline.js",
+      "file": "scripts/hooks/ecc-statusline.js",
+      "description": "Renders the ECC statusline for Claude Code.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc_context_monitor",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/ecc-context-monitor.js",
+      "file": "scripts/hooks/ecc-context-monitor.js",
+      "description": "Watches conversation context size and surfaces warnings.",
+      "inferred": false
+    },
+    {
+      "id": "file_cost_tracker",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/hooks/cost-tracker.js",
+      "file": "scripts/hooks/cost-tracker.js",
+      "description": "Tracks token and cost usage per session.",
+      "inferred": false
+    },
+    {
+      "id": "file_hook_flags",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/hook-flags.js",
+      "file": "scripts/lib/hook-flags.js",
+      "description": "Reads ECC_HOOK_PROFILE / ECC_DISABLED_HOOKS env to decide whether a hook runs.",
+      "inferred": false
+    },
+    {
+      "id": "file_utils_js",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/utils.js",
+      "file": "scripts/lib/utils.js",
+      "description": "Shared utility helpers used across hooks and install scripts.",
+      "inferred": false
+    },
+    {
+      "id": "file_package_manager_js",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/package-manager.js",
+      "file": "scripts/lib/package-manager.js",
+      "description": "Detects npm/pnpm/yarn/bun via env, project files, and CLAUDE_PACKAGE_MANAGER override.",
+      "inferred": false
+    },
+    {
+      "id": "file_session_manager_lib",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/session-manager.js",
+      "file": "scripts/lib/session-manager.js",
+      "description": "Reads/writes per-session state on disk.",
+      "inferred": false
+    },
+    {
+      "id": "file_mcp_config_lib",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/lib/mcp-config.js",
+      "file": "scripts/lib/mcp-config.js",
+      "description": "Loads and merges MCP server configurations across harnesses.",
+      "inferred": false
+    },
+    {
+      "id": "file_mcp_servers_json",
+      "type": "File",
+      "technical_level": "file",
+      "label": "mcp-configs/mcp-servers.json",
+      "file": "mcp-configs/mcp-servers.json",
+      "description": "Canonical MCP server definitions.",
+      "inferred": false
+    },
+    {
+      "id": "file_root_mcp",
+      "type": "File",
+      "technical_level": "file",
+      "label": ".mcp.json",
+      "file": ".mcp.json",
+      "description": "Repo-root MCP wiring.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_validate_agents",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-agents.js",
+      "file": "scripts/ci/validate-agents.js",
+      "description": "CI validator: agent frontmatter and structure.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_commands",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-commands.js",
+      "file": "scripts/ci/validate-commands.js",
+      "description": "CI validator: slash command markdown.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_hooks",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-hooks.js",
+      "file": "scripts/ci/validate-hooks.js",
+      "description": "CI validator: hooks.json shape and referenced scripts.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_skills",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-skills.js",
+      "file": "scripts/ci/validate-skills.js",
+      "description": "CI validator: skill sections and metadata.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_rules",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-rules.js",
+      "file": "scripts/ci/validate-rules.js",
+      "description": "CI validator: rule files.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_install_manifests",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-install-manifests.js",
+      "file": "scripts/ci/validate-install-manifests.js",
+      "description": "CI validator: install profile/module/component manifests against schemas.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_workflow_security",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-workflow-security.js",
+      "file": "scripts/ci/validate-workflow-security.js",
+      "description": "CI validator: GitHub Actions workflow security posture.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_unicode",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/check-unicode-safety.js",
+      "file": "scripts/ci/check-unicode-safety.js",
+      "description": "CI guard against unicode/homoglyph injection.",
+      "inferred": false
+    },
+    {
+      "id": "file_scan_supply_chain",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/scan-supply-chain-iocs.js",
+      "file": "scripts/ci/scan-supply-chain-iocs.js",
+      "description": "Scans for known supply-chain IOCs.",
+      "inferred": false
+    },
+    {
+      "id": "file_validate_no_paths",
+      "type": "File",
+      "technical_level": "file",
+      "label": "scripts/ci/validate-no-personal-paths.js",
+      "file": "scripts/ci/validate-no-personal-paths.js",
+      "description": "Prevents personal paths from leaking into the repo.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_llm_main",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/__main__.py",
+      "file": "src/llm/__main__.py",
+      "description": "Python `-m llm` entrypoint that defers to cli.selector.main.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_selector",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/cli/selector.py",
+      "file": "src/llm/cli/selector.py",
+      "description": "Interactive provider selector and CLI driver.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_interface",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/core/interface.py",
+      "file": "src/llm/core/interface.py",
+      "description": "Abstract provider interface.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_types",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/core/types.py",
+      "file": "src/llm/core/types.py",
+      "description": "Shared types for messages, tools, responses.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_resolver",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/providers/resolver.py",
+      "file": "src/llm/providers/resolver.py",
+      "description": "Selects and instantiates the requested provider.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_provider_claude",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/providers/claude.py",
+      "file": "src/llm/providers/claude.py",
+      "description": "Anthropic Claude provider.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_provider_openai",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/providers/openai.py",
+      "file": "src/llm/providers/openai.py",
+      "description": "OpenAI provider.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_provider_ollama",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/providers/ollama.py",
+      "file": "src/llm/providers/ollama.py",
+      "description": "Local Ollama provider.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_provider_astraflow",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/providers/astraflow.py",
+      "file": "src/llm/providers/astraflow.py",
+      "description": "AstraFlow provider.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_executor",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/tools/executor.py",
+      "file": "src/llm/tools/executor.py",
+      "description": "Executes tool calls emitted by providers.",
+      "inferred": false
+    },
+    {
+      "id": "file_llm_builder",
+      "type": "File",
+      "technical_level": "file",
+      "label": "src/llm/prompt/builder.py",
+      "file": "src/llm/prompt/builder.py",
+      "description": "Builds prompts from templates.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_ecc2_main",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/main.rs",
+      "file": "ecc2/src/main.rs",
+      "description": "ecc2 binary entrypoint and module declarations.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_session_daemon",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/session/daemon.rs",
+      "file": "ecc2/src/session/daemon.rs",
+      "description": "Long-running session daemon.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_session_runtime",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/session/runtime.rs",
+      "file": "ecc2/src/session/runtime.rs",
+      "description": "Session async runtime.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_session_manager",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/session/manager.rs",
+      "file": "ecc2/src/session/manager.rs",
+      "description": "Manages active session set.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_session_store",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/session/store.rs",
+      "file": "ecc2/src/session/store.rs",
+      "description": "Persistent session storage.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_tui_app",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/tui/app.rs",
+      "file": "ecc2/src/tui/app.rs",
+      "description": "TUI application loop.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_tui_dashboard",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/tui/dashboard.rs",
+      "file": "ecc2/src/tui/dashboard.rs",
+      "description": "Dashboard view.",
+      "inferred": false
+    },
+    {
+      "id": "file_ecc2_worktree",
+      "type": "File",
+      "technical_level": "file",
+      "label": "ecc2/src/worktree/mod.rs",
+      "file": "ecc2/src/worktree/mod.rs",
+      "description": "Git worktree orchestration.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_rules_security",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/security.md",
+      "file": "rules/security.md",
+      "description": "Common security rules (input handling, secrets, third-party data).",
+      "inferred": false
+    },
+    {
+      "id": "file_rules_code_review",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/code-review.md",
+      "file": "rules/code-review.md",
+      "description": "Common code-review checklist.",
+      "inferred": false
+    },
+    {
+      "id": "file_rules_coding_style",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/coding-style.md",
+      "file": "rules/coding-style.md",
+      "description": "Common coding-style baseline.",
+      "inferred": false
+    },
+    {
+      "id": "file_rules_testing",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/testing.md",
+      "file": "rules/testing.md",
+      "description": "Common testing rules.",
+      "inferred": false
+    },
+    {
+      "id": "file_rules_hooks",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/hooks.md",
+      "file": "rules/hooks.md",
+      "description": "How hook authors must behave (exit codes, timeouts, gating).",
+      "inferred": false
+    },
+    {
+      "id": "file_rules_agents",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/agents.md",
+      "file": "rules/agents.md",
+      "description": "Agent file conventions.",
+      "inferred": false
+    },
+    {
+      "id": "file_rules_git_workflow",
+      "type": "File",
+      "technical_level": "file",
+      "label": "rules/git-workflow.md",
+      "file": "rules/git-workflow.md",
+      "description": "Conventional commit / branch rules.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_agent_architect",
+      "type": "File",
+      "technical_level": "file",
+      "label": "agents/architect.md",
+      "file": "agents/architect.md",
+      "description": "Architect agent.",
+      "inferred": false
+    },
+    {
+      "id": "file_agent_code_reviewer",
+      "type": "File",
+      "technical_level": "file",
+      "label": "agents/code-reviewer.md",
+      "file": "agents/code-reviewer.md",
+      "description": "Generic code reviewer agent.",
+      "inferred": false
+    },
+    {
+      "id": "file_agent_code_explorer",
+      "type": "File",
+      "technical_level": "file",
+      "label": "agents/code-explorer.md",
+      "file": "agents/code-explorer.md",
+      "description": "Codebase exploration agent.",
+      "inferred": false
+    },
+    {
+      "id": "file_agent_code_architect",
+      "type": "File",
+      "technical_level": "file",
+      "label": "agents/code-architect.md",
+      "file": "agents/code-architect.md",
+      "description": "Architecture-design agent.",
+      "inferred": false
+    },
+    {
+      "id": "file_agent_code_simplifier",
+      "type": "File",
+      "technical_level": "file",
+      "label": "agents/code-simplifier.md",
+      "file": "agents/code-simplifier.md",
+      "description": "Simplification agent.",
+      "inferred": false
+    },
+    {
+      "id": "file_agent_build_error_resolver",
+      "type": "File",
+      "technical_level": "file",
+      "label": "agents/build-error-resolver.md",
+      "file": "agents/build-error-resolver.md",
+      "description": "Resolves build failures.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_cmd_tdd",
+      "type": "File",
+      "technical_level": "file",
+      "label": "commands/tdd-related",
+      "file": "commands/",
+      "description": "Cluster of TDD commands (cpp-test, flutter-test, go-test, etc.) plus tdd-driven entries.",
+      "inferred": true
+    },
+    {
+      "id": "file_cmd_code_review",
+      "type": "File",
+      "technical_level": "file",
+      "label": "commands/code-review.md",
+      "file": "commands/code-review.md",
+      "description": "Slash command for code review.",
+      "inferred": false
+    },
+    {
+      "id": "file_cmd_feature_dev",
+      "type": "File",
+      "technical_level": "file",
+      "label": "commands/feature-dev.md",
+      "file": "commands/feature-dev.md",
+      "description": "Slash command for guided feature development.",
+      "inferred": false
+    },
+    {
+      "id": "file_cmd_build_fix",
+      "type": "File",
+      "technical_level": "file",
+      "label": "commands/build-fix.md",
+      "file": "commands/build-fix.md",
+      "description": "Slash command to repair build errors.",
+      "inferred": false
+    },
+    {
+      "id": "file_cmd_harness_audit",
+      "type": "File",
+      "technical_level": "file",
+      "label": "commands/harness-audit.md",
+      "file": "commands/harness-audit.md",
+      "description": "Audits installed harness layout against expectations.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_skill_tdd_workflow",
+      "type": "File",
+      "technical_level": "file",
+      "label": "skills/tdd-workflow",
+      "file": "skills/tdd-workflow/",
+      "description": "Canonical TDD workflow skill.",
+      "inferred": false
+    },
+    {
+      "id": "file_skill_coding_standards",
+      "type": "File",
+      "technical_level": "file",
+      "label": "skills/coding-standards",
+      "file": "skills/coding-standards/",
+      "description": "Coding-standards skill.",
+      "inferred": false
+    },
+    {
+      "id": "file_skill_ecc_guide",
+      "type": "File",
+      "technical_level": "file",
+      "label": "skills/ecc-guide",
+      "file": "skills/ecc-guide/",
+      "description": "Guided tour of ECC features.",
+      "inferred": false
+    },
+    {
+      "id": "file_skill_security_review",
+      "type": "File",
+      "technical_level": "file",
+      "label": "skills/security-review",
+      "file": "skills/security-review/",
+      "description": "Security review skill.",
+      "inferred": false
+    },
+    {
+      "id": "file_skill_skill_comply",
+      "type": "File",
+      "technical_level": "file",
+      "label": "skills/skill-comply",
+      "file": "skills/skill-comply/",
+      "description": "Skill governance / compliance.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_doc_readme",
+      "type": "File",
+      "technical_level": "file",
+      "label": "README.md",
+      "file": "README.md",
+      "description": "Primary repository introduction and feature inventory.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_claude_md",
+      "type": "File",
+      "technical_level": "file",
+      "label": "CLAUDE.md",
+      "file": "CLAUDE.md",
+      "description": "Project instructions for Claude Code — always loaded into context.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_contributing",
+      "type": "File",
+      "technical_level": "file",
+      "label": "CONTRIBUTING.md",
+      "file": "CONTRIBUTING.md",
+      "description": "Contributor conventions for agents/skills/commands/hooks.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_security",
+      "type": "File",
+      "technical_level": "file",
+      "label": "SECURITY.md",
+      "file": "SECURITY.md",
+      "description": "Repository security policy.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_longform",
+      "type": "File",
+      "technical_level": "file",
+      "label": "the-longform-guide.md",
+      "file": "the-longform-guide.md",
+      "description": "Long-form ECC usage guide.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_shortform",
+      "type": "File",
+      "technical_level": "file",
+      "label": "the-shortform-guide.md",
+      "file": "the-shortform-guide.md",
+      "description": "Short-form ECC quick reference.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_security_guide",
+      "type": "File",
+      "technical_level": "file",
+      "label": "the-security-guide.md",
+      "file": "the-security-guide.md",
+      "description": "ECC security guide.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_working_context",
+      "type": "File",
+      "technical_level": "file",
+      "label": "WORKING-CONTEXT.md",
+      "file": "WORKING-CONTEXT.md",
+      "description": "Working context primer.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_cross_harness",
+      "type": "File",
+      "technical_level": "file",
+      "label": "docs/architecture/cross-harness.md",
+      "file": "docs/architecture/cross-harness.md",
+      "description": "Cross-harness architecture overview.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_observability",
+      "type": "File",
+      "technical_level": "file",
+      "label": "docs/architecture/observability-readiness.md",
+      "file": "docs/architecture/observability-readiness.md",
+      "description": "Observability readiness reference.",
+      "inferred": false
+    },
+    {
+      "id": "file_doc_harness_compliance",
+      "type": "File",
+      "technical_level": "file",
+      "label": "docs/architecture/harness-adapter-compliance.md",
+      "file": "docs/architecture/harness-adapter-compliance.md",
+      "description": "Compliance criteria for harness adapters.",
+      "inferred": false
+    },
+
+    {
+      "id": "file_test_run_all",
+      "type": "File",
+      "technical_level": "file",
+      "label": "tests/run-all.js",
+      "file": "tests/run-all.js",
+      "description": "Node test orchestrator entrypoint.",
+      "inferred": false
+    },
+    {
+      "id": "file_test_conftest",
+      "type": "File",
+      "technical_level": "file",
+      "label": "tests/conftest.py",
+      "file": "tests/conftest.py",
+      "description": "Pytest shared fixtures for the llm module tests.",
+      "inferred": false
+    },
+
+    {
+      "id": "func_install_plan_main",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/install-plan.js#main",
+      "file": "scripts/install-plan.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "CLI entry that loads manifests and emits a planned operation list for a chosen profile and target.",
+      "inferred": true
+    },
+    {
+      "id": "func_install_apply_main",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/install-apply.js#main",
+      "file": "scripts/install-apply.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "CLI entry that executes a plan and updates persistent install state.",
+      "inferred": true
+    },
+    {
+      "id": "func_ecc_dispatch",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/ecc.js#main",
+      "file": "scripts/ecc.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "Top-level `ecc` CLI dispatcher.",
+      "inferred": true
+    },
+    {
+      "id": "func_run_with_flags",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/hooks/run-with-flags.js#run",
+      "file": "scripts/hooks/run-with-flags.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "Reads stdin JSON, applies hook profile / disabled-hooks gating, and invokes the underlying handler's exported run().",
+      "inferred": true
+    },
+    {
+      "id": "func_plugin_hook_bootstrap",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/hooks/plugin-hook-bootstrap.js#bootstrap",
+      "file": "scripts/hooks/plugin-hook-bootstrap.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "Resolves the plugin root across install variants before delegating to the requested hook script.",
+      "inferred": true
+    },
+    {
+      "id": "func_pre_bash_dispatch",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/hooks/pre-bash-dispatcher.js#run",
+      "file": "scripts/hooks/pre-bash-dispatcher.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "PreToolUse(Bash) dispatcher coordinating commit-quality, no-verify, dev-server-block, tmux-reminder, push-reminder, and gateguard.",
+      "inferred": true
+    },
+    {
+      "id": "func_post_bash_dispatch",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/hooks/post-bash-dispatcher.js#run",
+      "file": "scripts/hooks/post-bash-dispatcher.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "PostToolUse(Bash) dispatcher coordinating command-log, build-complete, PR-created.",
+      "inferred": true
+    },
+    {
+      "id": "func_session_start_run",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/hooks/session-start.js#run",
+      "file": "scripts/hooks/session-start.js",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "Builds the additionalContext payload (superpowers, MCP instructions, skills list, current date) for SessionStart.",
+      "inferred": true
+    },
+    {
+      "id": "func_quality_gate_run",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "scripts/hooks/quality-gate.js#run",
+      "file": "scripts/hooks/quality-gate.js",
+      "importance": "core",
+      "entrypoint": false,
+      "description": "Aggregates lint/format/typecheck signals for post-edit gating.",
+      "inferred": true
+    },
+    {
+      "id": "func_llm_selector_main",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "src/llm/cli/selector.py#main",
+      "file": "src/llm/cli/selector.py",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "Interactive CLI entry; prints banner, lists providers, resolves the chosen provider, and dispatches to it.",
+      "inferred": true
+    },
+    {
+      "id": "func_llm_resolve",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "src/llm/providers/resolver.py#resolve",
+      "file": "src/llm/providers/resolver.py",
+      "importance": "core",
+      "entrypoint": false,
+      "description": "Resolves a provider name to a concrete provider instance implementing the core interface.",
+      "inferred": true
+    },
+    {
+      "id": "func_ecc2_main",
+      "type": "Function",
+      "technical_level": "function",
+      "label": "ecc2/src/main.rs#main",
+      "file": "ecc2/src/main.rs",
+      "importance": "core",
+      "entrypoint": true,
+      "description": "Rust binary entrypoint for the ecc2 daemon / TUI.",
+      "inferred": true
+    }
+  ],
+
+  "edges": [
+    { "source": "workflow_plugin_install", "target": "concept_install_profiles", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_plugin_install", "target": "concept_harness_adapter", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_plugin_install", "target": "concept_plugin_manifest", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_hook_lifecycle", "target": "concept_hook", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_hook_lifecycle", "target": "concept_quality_gate", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_hook_lifecycle", "target": "concept_session_state", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_hook_lifecycle", "target": "concept_security_baseline", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_tdd", "target": "concept_tdd", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_tdd", "target": "concept_quality_gate", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_tdd", "target": "concept_skill", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_tdd", "target": "concept_agent", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_code_review", "target": "concept_agent", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_code_review", "target": "concept_rule", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_code_review", "target": "concept_command", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_feature_dev", "target": "concept_agent", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_feature_dev", "target": "concept_skill", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_feature_dev", "target": "concept_command", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_feature_dev", "target": "concept_tdd", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_session_management", "target": "concept_session_state", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_session_management", "target": "concept_hook", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_cross_harness_adapt", "target": "concept_harness_adapter", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_cross_harness_adapt", "target": "concept_plugin_manifest", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_cross_harness_adapt", "target": "concept_mcp_config", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_ci_validation", "target": "concept_security_baseline", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_ci_validation", "target": "concept_test_validation", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_ci_validation", "target": "concept_install_profiles", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_skill_invocation", "target": "concept_skill", "type": "includes", "layer": "workflow-to-conceptual" },
+    { "source": "workflow_skill_invocation", "target": "concept_command", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "workflow_llm_provider_selection", "target": "concept_llm_provider", "type": "includes", "layer": "workflow-to-conceptual" },
+
+    { "source": "concept_plugin_manifest", "target": "service_plugin", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_plugin_manifest", "target": "service_schemas", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_install_profiles", "target": "service_manifests", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_install_profiles", "target": "service_schemas", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_install_profiles", "target": "service_scripts", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_harness_adapter", "target": "module_install_targets", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_harness_adapter", "target": "service_harness_layouts", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_agent", "target": "service_agents", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_skill", "target": "service_skills", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_command", "target": "service_commands", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_hook", "target": "service_hooks_config", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_hook", "target": "module_scripts_hooks", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_rule", "target": "service_rules", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_mcp_config", "target": "service_mcp", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_mcp_config", "target": "file_mcp_config_lib", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_session_state", "target": "service_ecc2", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_session_state", "target": "file_session_manager_lib", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_session_state", "target": "file_ecc_statusline", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_security_baseline", "target": "module_scripts_ci", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_security_baseline", "target": "file_doc_security", "type": "documented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_security_baseline", "target": "file_gateguard", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_quality_gate", "target": "file_quality_gate", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_quality_gate", "target": "file_stop_format_typecheck", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_quality_gate", "target": "file_post_edit_format", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_quality_gate", "target": "file_post_edit_typecheck", "type": "supported_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_llm_provider", "target": "service_llm", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_llm_provider", "target": "file_llm_interface", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_tdd", "target": "file_skill_tdd_workflow", "type": "documented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_test_validation", "target": "service_tests", "type": "implemented_by", "layer": "conceptual-to-technical" },
+    { "source": "concept_test_validation", "target": "module_scripts_ci", "type": "supported_by", "layer": "conceptual-to-technical" },
+
+    { "source": "service_plugin", "target": "file_plugin_json", "type": "contains", "layer": "technical" },
+    { "source": "service_plugin", "target": "file_marketplace_json", "type": "contains", "layer": "technical" },
+    { "source": "service_schemas", "target": "file_plugin_schema", "type": "contains", "layer": "technical" },
+    { "source": "service_manifests", "target": "file_install_profiles", "type": "contains", "layer": "technical" },
+    { "source": "service_manifests", "target": "file_install_modules", "type": "contains", "layer": "technical" },
+    { "source": "service_manifests", "target": "file_install_components", "type": "contains", "layer": "technical" },
+
+    { "source": "service_scripts", "target": "module_scripts_hooks", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "module_scripts_lib", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "module_scripts_ci", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "module_scripts_codex", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_install_plan_js", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_install_apply_js", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_ecc_js", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_doctor", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_repair", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_uninstall", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_list_installed", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_install_sh", "type": "contains", "layer": "technical" },
+    { "source": "service_scripts", "target": "file_install_ps1", "type": "contains", "layer": "technical" },
+
+    { "source": "module_scripts_lib", "target": "module_install_targets", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_install_executor", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_install_lifecycle", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_install_manifests_lib", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_install_state", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_hook_flags", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_utils_js", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_package_manager_js", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_session_manager_lib", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_lib", "target": "file_mcp_config_lib", "type": "contains", "layer": "technical" },
+
+    { "source": "module_install_targets", "target": "file_install_targets_registry", "type": "contains", "layer": "technical" },
+    { "source": "module_install_targets", "target": "file_install_target_claude", "type": "contains", "layer": "technical" },
+    { "source": "module_install_targets", "target": "file_install_target_cursor", "type": "contains", "layer": "technical" },
+    { "source": "module_install_targets", "target": "file_install_target_codex", "type": "contains", "layer": "technical" },
+    { "source": "module_install_targets", "target": "file_install_target_gemini", "type": "contains", "layer": "technical" },
+    { "source": "module_install_targets", "target": "file_install_target_opencode", "type": "contains", "layer": "technical" },
+    { "source": "module_install_targets", "target": "file_install_target_qwen", "type": "contains", "layer": "technical" },
+
+    { "source": "service_hooks_config", "target": "file_hooks_json", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_plugin_hook_bootstrap", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_run_with_flags", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_pre_bash_dispatcher", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_post_bash_dispatcher", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_session_start", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_session_end", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_session_activity_tracker", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_quality_gate", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_stop_format_typecheck", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_post_edit_format", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_post_edit_typecheck", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_block_no_verify", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_observe_runner", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_gateguard", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_pre_compact", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_ecc_statusline", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_ecc_context_monitor", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_hooks", "target": "file_cost_tracker", "type": "contains", "layer": "technical" },
+
+    { "source": "module_scripts_ci", "target": "file_validate_agents", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_commands", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_hooks", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_skills", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_rules", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_install_manifests", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_workflow_security", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_unicode", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_scan_supply_chain", "type": "contains", "layer": "technical" },
+    { "source": "module_scripts_ci", "target": "file_validate_no_paths", "type": "contains", "layer": "technical" },
+
+    { "source": "service_llm", "target": "module_llm_core", "type": "contains", "layer": "technical" },
+    { "source": "service_llm", "target": "module_llm_providers", "type": "contains", "layer": "technical" },
+    { "source": "service_llm", "target": "module_llm_cli", "type": "contains", "layer": "technical" },
+    { "source": "service_llm", "target": "module_llm_prompt", "type": "contains", "layer": "technical" },
+    { "source": "service_llm", "target": "module_llm_tools", "type": "contains", "layer": "technical" },
+    { "source": "service_llm", "target": "file_llm_main", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_core", "target": "file_llm_interface", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_core", "target": "file_llm_types", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_providers", "target": "file_llm_resolver", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_providers", "target": "file_llm_provider_claude", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_providers", "target": "file_llm_provider_openai", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_providers", "target": "file_llm_provider_ollama", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_providers", "target": "file_llm_provider_astraflow", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_cli", "target": "file_llm_selector", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_prompt", "target": "file_llm_builder", "type": "contains", "layer": "technical" },
+    { "source": "module_llm_tools", "target": "file_llm_executor", "type": "contains", "layer": "technical" },
+
+    { "source": "service_ecc2", "target": "module_ecc2_session", "type": "contains", "layer": "technical" },
+    { "source": "service_ecc2", "target": "module_ecc2_tui", "type": "contains", "layer": "technical" },
+    { "source": "service_ecc2", "target": "module_ecc2_misc", "type": "contains", "layer": "technical" },
+    { "source": "service_ecc2", "target": "file_ecc2_main", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_session", "target": "file_ecc2_session_daemon", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_session", "target": "file_ecc2_session_runtime", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_session", "target": "file_ecc2_session_manager", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_session", "target": "file_ecc2_session_store", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_tui", "target": "file_ecc2_tui_app", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_tui", "target": "file_ecc2_tui_dashboard", "type": "contains", "layer": "technical" },
+    { "source": "module_ecc2_misc", "target": "file_ecc2_worktree", "type": "contains", "layer": "technical" },
+
+    { "source": "service_rules", "target": "module_rules_common", "type": "contains", "layer": "technical" },
+    { "source": "service_rules", "target": "module_rules_languages", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_security", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_code_review", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_coding_style", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_testing", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_hooks", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_agents", "type": "contains", "layer": "technical" },
+    { "source": "module_rules_common", "target": "file_rules_git_workflow", "type": "contains", "layer": "technical" },
+
+    { "source": "service_agents", "target": "file_agent_architect", "type": "contains", "layer": "technical" },
+    { "source": "service_agents", "target": "file_agent_code_reviewer", "type": "contains", "layer": "technical" },
+    { "source": "service_agents", "target": "file_agent_code_explorer", "type": "contains", "layer": "technical" },
+    { "source": "service_agents", "target": "file_agent_code_architect", "type": "contains", "layer": "technical" },
+    { "source": "service_agents", "target": "file_agent_code_simplifier", "type": "contains", "layer": "technical" },
+    { "source": "service_agents", "target": "file_agent_build_error_resolver", "type": "contains", "layer": "technical" },
+
+    { "source": "service_commands", "target": "file_cmd_tdd", "type": "contains", "layer": "technical" },
+    { "source": "service_commands", "target": "file_cmd_code_review", "type": "contains", "layer": "technical" },
+    { "source": "service_commands", "target": "file_cmd_feature_dev", "type": "contains", "layer": "technical" },
+    { "source": "service_commands", "target": "file_cmd_build_fix", "type": "contains", "layer": "technical" },
+    { "source": "service_commands", "target": "file_cmd_harness_audit", "type": "contains", "layer": "technical" },
+
+    { "source": "service_skills", "target": "file_skill_tdd_workflow", "type": "contains", "layer": "technical" },
+    { "source": "service_skills", "target": "file_skill_coding_standards", "type": "contains", "layer": "technical" },
+    { "source": "service_skills", "target": "file_skill_ecc_guide", "type": "contains", "layer": "technical" },
+    { "source": "service_skills", "target": "file_skill_security_review", "type": "contains", "layer": "technical" },
+    { "source": "service_skills", "target": "file_skill_skill_comply", "type": "contains", "layer": "technical" },
+
+    { "source": "service_mcp", "target": "file_mcp_servers_json", "type": "contains", "layer": "technical" },
+    { "source": "service_mcp", "target": "file_root_mcp", "type": "contains", "layer": "technical" },
+
+    { "source": "service_docs", "target": "file_doc_readme", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_claude_md", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_contributing", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_security", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_longform", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_shortform", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_security_guide", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "file_doc_working_context", "type": "contains", "layer": "technical" },
+    { "source": "service_docs", "target": "module_docs_architecture", "type": "contains", "layer": "technical" },
+    { "source": "module_docs_architecture", "target": "file_doc_cross_harness", "type": "contains", "layer": "technical" },
+    { "source": "module_docs_architecture", "target": "file_doc_observability", "type": "contains", "layer": "technical" },
+    { "source": "module_docs_architecture", "target": "file_doc_harness_compliance", "type": "contains", "layer": "technical" },
+
+    { "source": "service_tests", "target": "file_test_run_all", "type": "contains", "layer": "technical" },
+    { "source": "service_tests", "target": "file_test_conftest", "type": "contains", "layer": "technical" },
+
+    { "source": "file_install_plan_js", "target": "func_install_plan_main", "type": "contains", "layer": "technical" },
+    { "source": "file_install_apply_js", "target": "func_install_apply_main", "type": "contains", "layer": "technical" },
+    { "source": "file_ecc_js", "target": "func_ecc_dispatch", "type": "contains", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "func_run_with_flags", "type": "contains", "layer": "technical" },
+    { "source": "file_plugin_hook_bootstrap", "target": "func_plugin_hook_bootstrap", "type": "contains", "layer": "technical" },
+    { "source": "file_pre_bash_dispatcher", "target": "func_pre_bash_dispatch", "type": "contains", "layer": "technical" },
+    { "source": "file_post_bash_dispatcher", "target": "func_post_bash_dispatch", "type": "contains", "layer": "technical" },
+    { "source": "file_session_start", "target": "func_session_start_run", "type": "contains", "layer": "technical" },
+    { "source": "file_quality_gate", "target": "func_quality_gate_run", "type": "contains", "layer": "technical" },
+    { "source": "file_llm_selector", "target": "func_llm_selector_main", "type": "contains", "layer": "technical" },
+    { "source": "file_llm_resolver", "target": "func_llm_resolve", "type": "contains", "layer": "technical" },
+    { "source": "file_ecc2_main", "target": "func_ecc2_main", "type": "contains", "layer": "technical" },
+
+    { "source": "file_hooks_json", "target": "file_plugin_hook_bootstrap", "type": "depends_on", "layer": "technical" },
+    { "source": "file_plugin_hook_bootstrap", "target": "file_run_with_flags", "type": "calls", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "file_hook_flags", "type": "calls", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "file_pre_bash_dispatcher", "type": "calls", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "file_post_bash_dispatcher", "type": "calls", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "file_session_start", "type": "calls", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "file_session_end", "type": "calls", "layer": "technical" },
+    { "source": "file_run_with_flags", "target": "file_observe_runner", "type": "calls", "layer": "technical" },
+    { "source": "file_pre_bash_dispatcher", "target": "file_block_no_verify", "type": "calls", "layer": "technical" },
+    { "source": "file_pre_bash_dispatcher", "target": "file_gateguard", "type": "calls", "layer": "technical" },
+    { "source": "file_session_start", "target": "file_session_manager_lib", "type": "imports", "layer": "technical" },
+    { "source": "file_session_activity_tracker", "target": "file_session_manager_lib", "type": "imports", "layer": "technical" },
+    { "source": "file_cost_tracker", "target": "file_session_manager_lib", "type": "imports", "layer": "technical" },
+    { "source": "file_post_edit_format", "target": "file_package_manager_js", "type": "imports", "layer": "technical" },
+    { "source": "file_post_edit_typecheck", "target": "file_package_manager_js", "type": "imports", "layer": "technical" },
+    { "source": "file_quality_gate", "target": "file_post_edit_format", "type": "depends_on", "layer": "technical" },
+    { "source": "file_quality_gate", "target": "file_post_edit_typecheck", "type": "depends_on", "layer": "technical" },
+    { "source": "file_stop_format_typecheck", "target": "file_quality_gate", "type": "depends_on", "layer": "technical" },
+
+    { "source": "file_install_plan_js", "target": "file_install_manifests_lib", "type": "imports", "layer": "technical" },
+    { "source": "file_install_plan_js", "target": "file_install_targets_registry", "type": "imports", "layer": "technical" },
+    { "source": "file_install_apply_js", "target": "file_install_executor", "type": "imports", "layer": "technical" },
+    { "source": "file_install_apply_js", "target": "file_install_lifecycle", "type": "imports", "layer": "technical" },
+    { "source": "file_install_apply_js", "target": "file_install_state", "type": "imports", "layer": "technical" },
+    { "source": "file_install_apply_js", "target": "file_install_targets_registry", "type": "imports", "layer": "technical" },
+    { "source": "file_install_targets_registry", "target": "file_install_target_claude", "type": "imports", "layer": "technical" },
+    { "source": "file_install_targets_registry", "target": "file_install_target_cursor", "type": "imports", "layer": "technical" },
+    { "source": "file_install_targets_registry", "target": "file_install_target_codex", "type": "imports", "layer": "technical" },
+    { "source": "file_install_targets_registry", "target": "file_install_target_gemini", "type": "imports", "layer": "technical" },
+    { "source": "file_install_targets_registry", "target": "file_install_target_opencode", "type": "imports", "layer": "technical" },
+    { "source": "file_install_targets_registry", "target": "file_install_target_qwen", "type": "imports", "layer": "technical" },
+    { "source": "file_install_sh", "target": "file_ecc_js", "type": "calls", "layer": "technical" },
+    { "source": "file_install_ps1", "target": "file_ecc_js", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc_js", "target": "file_install_plan_js", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc_js", "target": "file_install_apply_js", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc_js", "target": "file_doctor", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc_js", "target": "file_repair", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc_js", "target": "file_uninstall", "type": "calls", "layer": "technical" },
+
+    { "source": "file_validate_install_manifests", "target": "file_install_profiles", "type": "depends_on", "layer": "technical" },
+    { "source": "file_validate_install_manifests", "target": "file_install_modules", "type": "depends_on", "layer": "technical" },
+    { "source": "file_validate_install_manifests", "target": "file_install_components", "type": "depends_on", "layer": "technical" },
+    { "source": "file_validate_hooks", "target": "file_hooks_json", "type": "depends_on", "layer": "technical" },
+    { "source": "file_validate_agents", "target": "service_agents", "type": "depends_on", "layer": "technical" },
+    { "source": "file_validate_skills", "target": "service_skills", "type": "depends_on", "layer": "technical" },
+    { "source": "file_validate_rules", "target": "service_rules", "type": "depends_on", "layer": "technical" },
+
+    { "source": "file_llm_main", "target": "file_llm_selector", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_selector", "target": "file_llm_resolver", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_resolver", "target": "file_llm_provider_claude", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_resolver", "target": "file_llm_provider_openai", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_resolver", "target": "file_llm_provider_ollama", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_resolver", "target": "file_llm_provider_astraflow", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_provider_claude", "target": "file_llm_interface", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_provider_openai", "target": "file_llm_interface", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_provider_ollama", "target": "file_llm_interface", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_provider_astraflow", "target": "file_llm_interface", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_provider_claude", "target": "file_llm_types", "type": "imports", "layer": "technical" },
+    { "source": "file_llm_provider_claude", "target": "file_llm_executor", "type": "calls", "layer": "technical" },
+    { "source": "file_llm_provider_claude", "target": "file_llm_builder", "type": "calls", "layer": "technical" },
+    { "source": "func_llm_selector_main", "target": "func_llm_resolve", "type": "calls", "layer": "technical" },
+
+    { "source": "file_ecc2_main", "target": "file_ecc2_session_daemon", "type": "imports", "layer": "technical" },
+    { "source": "file_ecc2_main", "target": "file_ecc2_tui_app", "type": "imports", "layer": "technical" },
+    { "source": "file_ecc2_main", "target": "file_ecc2_worktree", "type": "imports", "layer": "technical" },
+    { "source": "file_ecc2_session_daemon", "target": "file_ecc2_session_runtime", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc2_session_daemon", "target": "file_ecc2_session_manager", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc2_session_manager", "target": "file_ecc2_session_store", "type": "calls", "layer": "technical" },
+    { "source": "file_ecc2_tui_app", "target": "file_ecc2_tui_dashboard", "type": "calls", "layer": "technical" },
+
+    { "source": "file_test_run_all", "target": "service_scripts", "type": "depends_on", "layer": "technical" },
+    { "source": "file_test_run_all", "target": "module_scripts_hooks", "type": "depends_on", "layer": "technical" },
+    { "source": "file_test_run_all", "target": "module_scripts_lib", "type": "depends_on", "layer": "technical" },
+    { "source": "file_test_conftest", "target": "service_llm", "type": "depends_on", "layer": "technical" },
+
+    { "source": "file_doc_claude_md", "target": "file_doc_readme", "type": "references", "layer": "technical" },
+    { "source": "file_doc_readme", "target": "file_doc_longform", "type": "references", "layer": "technical" },
+    { "source": "file_doc_readme", "target": "file_doc_shortform", "type": "references", "layer": "technical" },
+    { "source": "file_doc_readme", "target": "file_doc_security_guide", "type": "references", "layer": "technical" },
+    { "source": "file_doc_readme", "target": "file_doc_contributing", "type": "references", "layer": "technical" },
+    { "source": "file_doc_security_guide", "target": "file_doc_security", "type": "supplements", "layer": "technical" },
+    { "source": "file_doc_cross_harness", "target": "service_harness_layouts", "type": "describes", "layer": "technical" },
+    { "source": "file_doc_harness_compliance", "target": "concept_harness_adapter", "type": "describes", "layer": "technical" },
+    { "source": "file_doc_observability", "target": "concept_session_state", "type": "describes", "layer": "technical" }
+  ],
+
+  "layers": {
+    "workflow": [
+      "workflow_plugin_install",
+      "workflow_hook_lifecycle",
+      "workflow_tdd",
+      "workflow_code_review",
+      "workflow_feature_dev",
+      "workflow_session_management",
+      "workflow_cross_harness_adapt",
+      "workflow_ci_validation",
+      "workflow_skill_invocation",
+      "workflow_llm_provider_selection"
+    ],
+    "conceptual": [
+      "concept_plugin_manifest",
+      "concept_install_profiles",
+      "concept_harness_adapter",
+      "concept_agent",
+      "concept_skill",
+      "concept_command",
+      "concept_hook",
+      "concept_rule",
+      "concept_mcp_config",
+      "concept_session_state",
+      "concept_security_baseline",
+      "concept_quality_gate",
+      "concept_llm_provider",
+      "concept_tdd",
+      "concept_test_validation"
+    ],
+    "technical": [
+      "service_plugin",
+      "service_agents",
+      "service_skills",
+      "service_commands",
+      "service_hooks_config",
+      "service_scripts",
+      "service_rules",
+      "service_mcp",
+      "service_manifests",
+      "service_schemas",
+      "service_llm",
+      "service_ecc2",
+      "service_docs",
+      "service_tests",
+      "service_harness_layouts",
+      "module_scripts_hooks",
+      "module_scripts_lib",
+      "module_scripts_ci",
+      "module_scripts_codex",
+      "module_install_targets",
+      "module_llm_core",
+      "module_llm_providers",
+      "module_llm_cli",
+      "module_llm_prompt",
+      "module_llm_tools",
+      "module_ecc2_session",
+      "module_ecc2_tui",
+      "module_ecc2_misc",
+      "module_rules_common",
+      "module_rules_languages",
+      "module_docs_architecture",
+      "file_plugin_json",
+      "file_marketplace_json",
+      "file_plugin_schema",
+      "file_install_profiles",
+      "file_install_modules",
+      "file_install_components",
+      "file_install_sh",
+      "file_install_ps1",
+      "file_install_plan_js",
+      "file_install_apply_js",
+      "file_install_executor",
+      "file_install_lifecycle",
+      "file_install_manifests_lib",
+      "file_install_state",
+      "file_install_targets_registry",
+      "file_install_target_claude",
+      "file_install_target_cursor",
+      "file_install_target_codex",
+      "file_install_target_gemini",
+      "file_install_target_opencode",
+      "file_install_target_qwen",
+      "file_ecc_js",
+      "file_doctor",
+      "file_repair",
+      "file_uninstall",
+      "file_list_installed",
+      "file_hooks_json",
+      "file_plugin_hook_bootstrap",
+      "file_run_with_flags",
+      "file_pre_bash_dispatcher",
+      "file_post_bash_dispatcher",
+      "file_session_start",
+      "file_session_end",
+      "file_session_activity_tracker",
+      "file_quality_gate",
+      "file_stop_format_typecheck",
+      "file_post_edit_format",
+      "file_post_edit_typecheck",
+      "file_block_no_verify",
+      "file_observe_runner",
+      "file_gateguard",
+      "file_pre_compact",
+      "file_ecc_statusline",
+      "file_ecc_context_monitor",
+      "file_cost_tracker",
+      "file_hook_flags",
+      "file_utils_js",
+      "file_package_manager_js",
+      "file_session_manager_lib",
+      "file_mcp_config_lib",
+      "file_mcp_servers_json",
+      "file_root_mcp",
+      "file_validate_agents",
+      "file_validate_commands",
+      "file_validate_hooks",
+      "file_validate_skills",
+      "file_validate_rules",
+      "file_validate_install_manifests",
+      "file_validate_workflow_security",
+      "file_validate_unicode",
+      "file_scan_supply_chain",
+      "file_validate_no_paths",
+      "file_llm_main",
+      "file_llm_selector",
+      "file_llm_interface",
+      "file_llm_types",
+      "file_llm_resolver",
+      "file_llm_provider_claude",
+      "file_llm_provider_openai",
+      "file_llm_provider_ollama",
+      "file_llm_provider_astraflow",
+      "file_llm_executor",
+      "file_llm_builder",
+      "file_ecc2_main",
+      "file_ecc2_session_daemon",
+      "file_ecc2_session_runtime",
+      "file_ecc2_session_manager",
+      "file_ecc2_session_store",
+      "file_ecc2_tui_app",
+      "file_ecc2_tui_dashboard",
+      "file_ecc2_worktree",
+      "file_rules_security",
+      "file_rules_code_review",
+      "file_rules_coding_style",
+      "file_rules_testing",
+      "file_rules_hooks",
+      "file_rules_agents",
+      "file_rules_git_workflow",
+      "file_agent_architect",
+      "file_agent_code_reviewer",
+      "file_agent_code_explorer",
+      "file_agent_code_architect",
+      "file_agent_code_simplifier",
+      "file_agent_build_error_resolver",
+      "file_cmd_tdd",
+      "file_cmd_code_review",
+      "file_cmd_feature_dev",
+      "file_cmd_build_fix",
+      "file_cmd_harness_audit",
+      "file_skill_tdd_workflow",
+      "file_skill_coding_standards",
+      "file_skill_ecc_guide",
+      "file_skill_security_review",
+      "file_skill_skill_comply",
+      "file_doc_readme",
+      "file_doc_claude_md",
+      "file_doc_contributing",
+      "file_doc_security",
+      "file_doc_longform",
+      "file_doc_shortform",
+      "file_doc_security_guide",
+      "file_doc_working_context",
+      "file_doc_cross_harness",
+      "file_doc_observability",
+      "file_doc_harness_compliance",
+      "file_test_run_all",
+      "file_test_conftest",
+      "func_install_plan_main",
+      "func_install_apply_main",
+      "func_ecc_dispatch",
+      "func_run_with_flags",
+      "func_plugin_hook_bootstrap",
+      "func_pre_bash_dispatch",
+      "func_post_bash_dispatch",
+      "func_session_start_run",
+      "func_quality_gate_run",
+      "func_llm_selector_main",
+      "func_llm_resolve",
+      "func_ecc2_main"
+    ]
+  }
+}
