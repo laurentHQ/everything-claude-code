@@ -777,6 +777,47 @@ Responsibilities:
 - refuse repair if requested modules no longer exist in the current manifest
   unless a compatibility map exists
 
+## Profile Safety & Promotion Lifecycle
+
+Profile-level safety is layered across four stages. Each stage rejects malformed
+or unsafe inputs before they reach the next.
+
+1. **Declared.** Every profile in `manifests/install-profiles.json` carries a
+   `settings` block (`allow_mcp`, `allowed_mcp_servers`, `block_global_install`,
+   `hook_profile`, `require_audit_log`, `lifecycle`). The shape is defined by
+   `schemas/install-settings.schema.json`.
+2. **Schema-validated.** `schemas/install-profiles.schema.json` requires every
+   profile to embed a `settings` object. AJV runs at planner boot and at CI
+   time via `scripts/ci/validate-install-manifests.js`.
+3. **Semantic-checked.** `runProfileSettingsSemanticChecks` in the same CI
+   validator catches impossible combinations that the schema can't express
+   (e.g., `allow_mcp:false` with a non-empty `allowed_mcp_servers`).
+4. **Policy-enforced at plan time.** `scripts/lib/install/policy.js` implements
+   four runtime rules that the planner invokes against every resolved request:
+   - Rule 1: `allow_mcp:false` rejects MCP components or modules targeting
+     `.mcp.json` (`mcp-not-allowed`).
+   - Rule 2: `allow_mcp:true` with a non-empty `allowed_mcp_servers` rejects
+     servers outside the allowlist (`mcp-not-allowed`).
+   - Rule 3: `block_global_install:true` rejects `--scope user`
+     (`global-install-blocked`).
+   - Rule 4: `hook_profile:"validation"` rejects hooks modules carrying
+     `riskLevel:"high"` (`hook-risk-high`).
+
+   Conflicts surface in `plan.conflicts[]`; `assertNoBlockingConflicts` in
+   `scripts/install-apply.js` halts the apply step when any have
+   `severity:"error"`.
+
+The promotion lifecycle is orthogonal to the per-install policy. A profile's
+`settings.lifecycle` is one of `draft | candidate | promoted`. The promotion
+helper `scripts/ecc-promote.js` only advances to `promoted` after a passing
+gates report from `scripts/ci/gate-profile-promotion.js`, which sequences five
+gates: schema validation, semantic checks, snapshot conformance, policy
+unit tests, and the secret-shape scanner. CI wires this in
+`.github/workflows/profile-promotion.yml`.
+
+Cross-references: `docs/PROFILE-SAFETY-GUIDE.md` is the operator walkthrough,
+and `docs/PROFILE-LIMITATIONS.md` is the canonical enforcement map.
+
 ## Legacy Compatibility Layer
 
 Current `install.sh` accepts:

@@ -79,7 +79,8 @@
               "unmanaged-file",
               "profile-conflict",
               "mcp-not-allowed",
-              "global-install-blocked"
+              "global-install-blocked",
+              "hook-risk-high"
             ]
           },
           "severity": {
