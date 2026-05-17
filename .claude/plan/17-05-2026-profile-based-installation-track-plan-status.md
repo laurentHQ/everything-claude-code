@@ -38,8 +38,8 @@
 | Wave | Tracks | Status | Commit(s) |
 |---|---|---|---|
 | 1 | T1 | **done** | `ddf803f1` |
-| 2 | T3a | **done** | (pending) |
-| 3 | T2 + T3b-min | pending | — |
+| 2 | T3a | **done** | `d244024a` |
+| 3 | T2 + T3b-min | **done** | (pending) |
 | 4 | T5 | pending | — |
 | 5 | T4 | pending | — |
 
@@ -48,14 +48,15 @@
 | Wave | Tier T (tests) | Tier W (wiring) | Tier B (behavioral) | Tier S (simplification) | Commit(s) |
 |---|---|---|---|---|---|
 | 1 | 2501/2501 ✓ | CI validator runs semantic checks; `getProfileSettings` exported; `resolveInstallPlan` surfaces `profileSettings`; `listInstallProfiles` passes through `settings`+`targets` | Schema rejects unknown `settings` keys; semantic checker emits `mcp-not-allowed`-style error msgs for each of the 3 rules; `getProfileSettings` clone-isolated | Two `cloneJsonValue` helpers now exist (`apply.js` + `install-manifests.js`); centralize in T2 | `ddf803f1` |
-| 2 | 2514/2514 ✓ (+13) | `assertInsideAllowedRoot` called pre-write in `apply.js` for both per-op loop and resolved-claude-hooks final write; `getAllowedRoots` exported; adapter contract gains `allowedRoots(scope, input)` defaulting to `[]` (opt-in — no adapter declares yet, so no-op for existing flows) | symlink escape rejected, traversal `..` rejected, absolute-path escape rejected, empty allowedRoots is no-op, exact-match + nested + future-paths-with-missing-intermediates all pass; integration test in `tests/integration/path-safety.test.js` exercises apply.js | apply.js stayed minimal — 1 hoisted lookup + 2 assertion call sites; no factory helpers were touched (intentional; documented in `helpers.js` comment) | (pending) |
-| 3 | — | — | — | — | — |
+| 2 | 2514/2514 ✓ (+13) | `assertInsideAllowedRoot` called pre-write in `apply.js` for both per-op loop and resolved-claude-hooks final write; `getAllowedRoots` exported; adapter contract gains `allowedRoots(scope, input)` defaulting to `[]` (opt-in — no adapter declares yet, so no-op for existing flows) | symlink escape rejected, traversal `..` rejected, absolute-path escape rejected, empty allowedRoots is no-op, exact-match + nested + future-paths-with-missing-intermediates all pass; integration test in `tests/integration/path-safety.test.js` exercises apply.js | apply.js stayed minimal — 1 hoisted lookup + 2 assertion call sites; no factory helpers were touched (intentional; documented in `helpers.js` comment) | `d244024a` |
+| 3 | 2537/2537 ✓ (+23) | `buildPlanDocument` consumed by `scripts/install-plan.js` when `--target` given; new dispatch table in `apply.js` handles `merge-json` + `copy-file` + `copy-path` (alias) and throws on unknown kinds; `claude-home` + `codex-home` now declare `allowedRoots` deriving from `input.targetRoot` (with `os`/`path` fallbacks for `sandbox`/`project`/`user` scope) | Real CLI `--profile enterprise --target claude --json` validates against `schemas/install-plan.schema.json`; `safety.mcpAllowed: true` reflects enterprise's `allow_mcp:true`; `safety.dryRunRequired: true` reflects `require_dry_run_first:true`; output is byte-identical on repeat invocations; conflicts emitted with `reason:"outside-allowed-root"` + `severity:"error"` when destinations escape | Discovery: the codebase actually emits a third operation kind `copy-path` from helpers.js. T2 added it to schema enum + dispatch table — flagged for v1 to reconcile with spec's preferred `copy-file` name. | (pending) |
 | 4 | — | — | — | — | — |
 | 5 | — | — | — | — | — |
 
 ## Tech-debt items (deferred to v1, logged from Tier S)
 
 - (Wave 1) Two `cloneJsonValue` helpers (one in `scripts/lib/install/apply.js`, one new in `scripts/lib/install-manifests.js`). T2 should consolidate when it creates `scripts/lib/install/plan-operations.js`.
+- (Wave 3) Operation-kind naming: codebase emits `copy-path` from the adapter factory while apply.js/state-store call it `copy-file`. T2 added `copy-path` to both the install-plan schema enum and the dispatch table (aliased to `copy-file` handler) to bridge — v1 should pick one canonical name (recommendation in §0.5 item 1 of the track plan: keep `copy-file`, rename `copy-path` in helpers.js with a state-loader migration; or vice versa).
 
 ## Open follow-ups
 

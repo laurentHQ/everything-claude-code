@@ -1,3 +1,4 @@
+const os = require('os');
 const path = require('path');
 
 const {
@@ -8,6 +9,35 @@ const {
 } = require('./helpers');
 
 const CLAUDE_ECC_NAMESPACE = 'ecc';
+
+function buildClaudeAllowedRoots(scope, input, adapter) {
+  // Always include the actual root the adapter would resolve to for this invocation.
+  // This is the canonical safe root for the current install.
+  const planningInput = {
+    homeDir: input && input.homeDir,
+    projectRoot: input && input.projectRoot,
+    repoRoot: input && input.repoRoot,
+  };
+  const resolvedRoot = (input && input.targetRoot)
+    ? input.targetRoot
+    : adapter.resolveRoot(planningInput);
+  const roots = new Set([resolvedRoot]);
+
+  // Per the safety spec, also accept the canonical declared roots when present.
+  // These DO NOT widen what apply.js permits when targetRoot is the temp dir;
+  // they only matter if a caller has not set targetRoot AND has chosen a
+  // non-default homeDir. In practice apply.js always sets targetRoot, so this
+  // is belt-and-suspenders.
+  if (scope === 'sandbox') {
+    roots.add(path.resolve('./sandbox/home/.claude'));
+  } else if (scope === 'project') {
+    roots.add(path.resolve('./.claude'));
+  } else if (scope === 'user') {
+    roots.add(path.join(os.homedir(), '.claude'));
+  }
+
+  return [...roots];
+}
 
 function getClaudeManagedDestinationPath(adapter, sourceRelativePath, input) {
   const normalizedSourcePath = normalizeRelativePath(sourceRelativePath);
@@ -49,6 +79,7 @@ module.exports = createInstallTargetAdapter({
   rootSegments: ['.claude'],
   installStatePathSegments: ['ecc', 'install-state.json'],
   nativeRootRelativePath: '.claude-plugin',
+  allowedRoots: buildClaudeAllowedRoots,
   planOperations(input, adapter) {
     const modules = Array.isArray(input.modules)
       ? input.modules

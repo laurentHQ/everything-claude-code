@@ -116,6 +116,68 @@ function buildResolvedClaudeHooks(plan) {
   };
 }
 
+// Typed dispatch table for install operations.
+//
+// Each handler receives (operation, ctx) where ctx supplies request-scoped
+// inputs that don't belong on the operation itself (e.g. the disabled-MCP
+// server list parsed from ECC_DISABLED_MCPS). Behavior is identical to the
+// pre-T2 conditional chain — this is a structural refactor, not a behavior
+// change.
+//
+// Pre-handler invariants enforced by applyInstallPlan (NOT by the handler):
+//   - assertInsideAllowedRoot(operation.destinationPath, allowedRoots) has run.
+//   - fs.mkdirSync(path.dirname(operation.destinationPath), { recursive: true })
+//     has run.
+//
+// `copy-path` aliases `copy-file` because the adapter helpers
+// (scripts/lib/install-targets/helpers.js) emit `kind: 'copy-path'` as their
+// default. Pre-T2 the catch-all else-branch handled it; we preserve that
+// behavior by routing it through the same handler.
+function handleMergeJson(operation, ctx) {
+  const payload = cloneJsonValue(operation.mergePayload);
+  if (payload === undefined) {
+    throw new Error(`Missing merge payload for ${operation.destinationPath}`);
+  }
+
+  const filteredPayload = (
+    isMcpConfigPath(operation.destinationPath) && ctx.disabledServers.length > 0
+  )
+    ? filterMcpConfig(payload, ctx.disabledServers).config
+    : payload;
+
+  const currentValue = fs.existsSync(operation.destinationPath)
+    ? readJsonObject(operation.destinationPath, 'existing JSON config')
+    : {};
+  const mergedValue = deepMergeJson(currentValue, filteredPayload);
+  fs.writeFileSync(operation.destinationPath, formatJson(mergedValue), 'utf8');
+}
+
+function handleCopyFile(operation, ctx) {
+  if (isMcpConfigPath(operation.destinationPath) && ctx.disabledServers.length > 0) {
+    const sourceConfig = readJsonObject(operation.sourcePath, 'MCP config');
+    const filteredConfig = filterMcpConfig(sourceConfig, ctx.disabledServers).config;
+    fs.writeFileSync(operation.destinationPath, formatJson(filteredConfig), 'utf8');
+    return;
+  }
+  fs.copyFileSync(operation.sourcePath, operation.destinationPath);
+}
+
+const DISPATCH = {
+  'merge-json': handleMergeJson,
+  'copy-file': handleCopyFile,
+  'copy-path': handleCopyFile,
+};
+
+function dispatchOperation(operation, ctx) {
+  const handler = DISPATCH[operation.kind];
+  if (!handler) {
+    throw new Error(
+      `Unsupported install operation kind: ${operation.kind} (destination ${operation.destinationPath})`
+    );
+  }
+  handler(operation, ctx);
+}
+
 function applyInstallPlan(plan) {
   const resolvedClaudeHooksPlan = buildResolvedClaudeHooks(plan);
   const disabledServers = parseDisabledMcpServers(process.env.ECC_DISABLED_MCPS);
@@ -128,38 +190,12 @@ function applyInstallPlan(plan) {
     })
     : [];
 
+  const ctx = { disabledServers };
+
   for (const operation of plan.operations) {
     assertInsideAllowedRoot(operation.destinationPath, allowedRoots);
     fs.mkdirSync(path.dirname(operation.destinationPath), { recursive: true });
-
-    if (operation.kind === 'merge-json') {
-      const payload = cloneJsonValue(operation.mergePayload);
-      if (payload === undefined) {
-        throw new Error(`Missing merge payload for ${operation.destinationPath}`);
-      }
-
-      const filteredPayload = (
-        isMcpConfigPath(operation.destinationPath) && disabledServers.length > 0
-      )
-        ? filterMcpConfig(payload, disabledServers).config
-        : payload;
-
-      const currentValue = fs.existsSync(operation.destinationPath)
-        ? readJsonObject(operation.destinationPath, 'existing JSON config')
-        : {};
-      const mergedValue = deepMergeJson(currentValue, filteredPayload);
-      fs.writeFileSync(operation.destinationPath, formatJson(mergedValue), 'utf8');
-      continue;
-    }
-
-    if (operation.kind === 'copy-file' && isMcpConfigPath(operation.destinationPath) && disabledServers.length > 0) {
-      const sourceConfig = readJsonObject(operation.sourcePath, 'MCP config');
-      const filteredConfig = filterMcpConfig(sourceConfig, disabledServers).config;
-      fs.writeFileSync(operation.destinationPath, formatJson(filteredConfig), 'utf8');
-      continue;
-    }
-
-    fs.copyFileSync(operation.sourcePath, operation.destinationPath);
+    dispatchOperation(operation, ctx);
   }
 
   if (resolvedClaudeHooksPlan) {
