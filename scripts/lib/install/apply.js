@@ -6,6 +6,7 @@ const path = require('path');
 const { writeInstallState } = require('../install-state');
 const { filterMcpConfig, parseDisabledMcpServers } = require('../mcp-config');
 const { assertInsideAllowedRoot } = require('./path-safety');
+const { maybeAppendAuditEvent } = require('./audit-log');
 
 function readJsonObject(filePath, label) {
   let parsed;
@@ -209,6 +210,29 @@ function applyInstallPlan(plan) {
   }
 
   writeInstallState(plan.installStatePath, plan.statePreview);
+
+  try {
+    const statePreview = plan.statePreview || {};
+    const settings = statePreview.settings || null;
+    const request = statePreview.request || {};
+    const resolution = statePreview.resolution || {};
+    maybeAppendAuditEvent({
+      settings,
+      scope: (settings && settings.scope) || plan.scope || null,
+      stateDir: plan.stateDir || null,
+      targetRoot: plan.targetRoot,
+      overridePath: plan.auditLogPath || null,
+      event: {
+        action: 'install-apply',
+        profileId: request.profile || null,
+        target: plan.adapter && plan.adapter.target ? plan.adapter.target : null,
+        modules: Array.isArray(resolution.selectedModules) ? resolution.selectedModules : [],
+        operationCount: Array.isArray(plan.operations) ? plan.operations.length : 0,
+      },
+    });
+  } catch (error) {
+    process.stderr.write(`[audit-log] failed to append install event: ${error.message}\n`);
+  }
 
   return {
     ...plan,

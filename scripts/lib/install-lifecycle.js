@@ -4,6 +4,7 @@ const path = require('path');
 
 const { resolveInstallPlan, loadInstallManifests } = require('./install-manifests');
 const { readInstallState, writeInstallState } = require('./install-state');
+const { maybeAppendAuditEvent } = require('./install/audit-log');
 const {
   createManifestInstallPlan,
 } = require('./install-executor');
@@ -279,9 +280,13 @@ function deepRemoveJsonSubset(currentValue, managedValue) {
   return currentValue === managedValue ? JSON_REMOVE_SENTINEL : currentValue;
 }
 
+function isFileCopyKind(kind) {
+  return kind === 'copy-file' || kind === 'copy-path';
+}
+
 function hydrateRecordedOperations(repoRoot, operations) {
   return operations.map(operation => {
-    if (operation.kind !== 'copy-file') {
+    if (!isFileCopyKind(operation.kind)) {
       return { ...operation };
     }
 
@@ -306,11 +311,11 @@ function buildRecordedStatePreview(state, context, operations) {
 }
 
 function shouldRepairFromRecordedOperations(state) {
-  return getManagedOperations(state).some(operation => operation.kind !== 'copy-file');
+  return getManagedOperations(state).some(operation => !isFileCopyKind(operation.kind));
 }
 
 function executeRepairOperation(repoRoot, operation) {
-  if (operation.kind === 'copy-file') {
+  if (isFileCopyKind(operation.kind)) {
     const sourcePath = resolveOperationSourcePath(repoRoot, operation);
     if (!sourcePath || !fs.existsSync(sourcePath)) {
       throw new Error(`Missing source file for repair: ${sourcePath || operation.sourceRelativePath}`);
@@ -361,7 +366,7 @@ function executeRepairOperation(repoRoot, operation) {
 }
 
 function executeUninstallOperation(operation) {
-  if (operation.kind === 'copy-file') {
+  if (isFileCopyKind(operation.kind)) {
     if (!fs.existsSync(operation.destinationPath)) {
       return {
         removedPaths: [],
@@ -525,7 +530,7 @@ function inspectManagedOperation(repoRoot, operation) {
     };
   }
 
-  if (operation.kind === 'copy-file') {
+  if (isFileCopyKind(operation.kind)) {
     const sourcePath = resolveOperationSourcePath(repoRoot, operation);
     if (!sourcePath || !fs.existsSync(sourcePath)) {
       return {
@@ -1174,6 +1179,28 @@ function uninstallInstalledStates(options = {}) {
 
       for (const cleanupTarget of cleanupTargets) {
         cleanupEmptyParentDirs(cleanupTarget, state.target.root);
+      }
+
+      try {
+        const settings = state.settings || null;
+        maybeAppendAuditEvent({
+          settings,
+          scope: (settings && settings.scope) || null,
+          stateDir: options.stateDir || null,
+          targetRoot: state.target.root,
+          overridePath: options.auditLogPath || null,
+          event: {
+            action: 'uninstall',
+            profileId: (state.request && state.request.profile) || null,
+            target: record.adapter && record.adapter.target ? record.adapter.target : null,
+            modules: (state.resolution && Array.isArray(state.resolution.selectedModules))
+              ? state.resolution.selectedModules
+              : [],
+            operationCount: Array.isArray(state.operations) ? state.operations.length : 0,
+          },
+        });
+      } catch (auditError) {
+        process.stderr.write(`[audit-log] failed to append uninstall event: ${auditError.message}\n`);
       }
 
       return {

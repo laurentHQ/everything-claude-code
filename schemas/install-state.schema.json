@@ -15,7 +15,7 @@
   "properties": {
     "schemaVersion": {
       "type": "string",
-      "const": "ecc.install.v1"
+      "const": "ecc.install.v2"
     },
     "installedAt": {
       "type": "string",
@@ -161,6 +161,69 @@
         }
       }
     },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "type": "string",
+          "enum": ["project", "user", "sandbox"]
+        },
+        "hook_profile": {
+          "type": "string",
+          "enum": ["none", "standard", "strict", "validation"]
+        },
+        "allow_mcp": {
+          "type": "boolean"
+        },
+        "allowed_mcp_servers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]+$"
+          }
+        },
+        "require_dry_run_first": {
+          "type": "boolean"
+        },
+        "require_audit_log": {
+          "type": "boolean"
+        },
+        "block_global_install": {
+          "type": "boolean"
+        },
+        "write_scope": {
+          "type": "string",
+          "enum": ["project-only", "project-local", "controlled"]
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": ["draft", "candidate", "promoted"]
+        }
+      }
+    },
+    "backups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["destination", "backupPath", "recordedAt"],
+        "properties": {
+          "destination": {
+            "type": "string",
+            "minLength": 1
+          },
+          "backupPath": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recordedAt": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "operations": {
       "type": "array",
       "items": {
@@ -178,7 +241,17 @@
         "properties": {
           "kind": {
             "type": "string",
-            "minLength": 1
+            "enum": [
+              "copy-file",
+              "copy-path",
+              "merge-json",
+              "copy-tree",
+              "flatten-copy",
+              "render-template",
+              "merge-jsonc",
+              "mkdir",
+              "remove"
+            ]
           },
           "moduleId": {
             "type": "string",

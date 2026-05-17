@@ -76,7 +76,7 @@ function runTests() {
       installedAt: '2026-03-13T00:00:00Z',
     });
 
-    assert.strictEqual(state.schemaVersion, 'ecc.install.v1');
+    assert.strictEqual(state.schemaVersion, 'ecc.install.v2');
     assert.strictEqual(state.target.id, 'cursor-project');
     assert.strictEqual(state.request.profile, 'developer');
     assert.strictEqual(state.operations.length, 1);

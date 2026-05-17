@@ -690,6 +690,7 @@ function createManifestInstallPlan(options = {}) {
     },
     operations,
     source,
+    settings: plan.profileSettings || undefined,
   });
 
   return {

@@ -211,7 +211,7 @@ test('applyInstallPlan throws when an operation escapes allowedRoots', () => {
         { kind: 'copy-file', moduleId: 'mod', sourcePath: srcB, destinationPath: destB },
       ],
       installStatePath: path.join(tmp, 'state.json'),
-      statePreview: { schemaVersion: 'ecc.install.v1' },
+      statePreview: { schemaVersion: 'ecc.install.v2' },
       targetRoot: tmp,
     };
 
@@ -261,7 +261,7 @@ test('applyInstallPlan partial-write ordering when first op inside, second op ou
         { kind: 'copy-file', moduleId: 'mod', sourcePath: srcB, destinationPath: destB },
       ],
       installStatePath: path.join(allowed, 'state.json'),
-      statePreview: { schemaVersion: 'ecc.install.v1' },
+      statePreview: { schemaVersion: 'ecc.install.v2' },
       targetRoot: allowed,
     };
 
@@ -303,7 +303,7 @@ test('applyInstallPlan is a no-op when adapter declares no allowedRoots', () => 
       installStatePath: path.join(tmp, 'state.json'),
       // Minimal valid install-state v1 with all required fields.
       statePreview: {
-        schemaVersion: 'ecc.install.v1',
+        schemaVersion: 'ecc.install.v2',
         installedAt: new Date().toISOString(),
         target: {
           id: 'test',
