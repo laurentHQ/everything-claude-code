@@ -5,6 +5,7 @@ const path = require('path');
 
 const { writeInstallState } = require('../install-state');
 const { filterMcpConfig, parseDisabledMcpServers } = require('../mcp-config');
+const { assertInsideAllowedRoot } = require('./path-safety');
 
 function readJsonObject(filePath, label) {
   let parsed;
@@ -118,8 +119,17 @@ function buildResolvedClaudeHooks(plan) {
 function applyInstallPlan(plan) {
   const resolvedClaudeHooksPlan = buildResolvedClaudeHooks(plan);
   const disabledServers = parseDisabledMcpServers(process.env.ECC_DISABLED_MCPS);
+  const allowedRoots = (plan.adapter && typeof plan.adapter.allowedRoots === 'function')
+    ? plan.adapter.allowedRoots('apply', {
+      homeDir: plan.homeDir,
+      projectRoot: plan.projectRoot,
+      repoRoot: plan.repoRoot,
+      targetRoot: plan.targetRoot,
+    })
+    : [];
 
   for (const operation of plan.operations) {
+    assertInsideAllowedRoot(operation.destinationPath, allowedRoots);
     fs.mkdirSync(path.dirname(operation.destinationPath), { recursive: true });
 
     if (operation.kind === 'merge-json') {
@@ -153,6 +163,7 @@ function applyInstallPlan(plan) {
   }
 
   if (resolvedClaudeHooksPlan) {
+    assertInsideAllowedRoot(resolvedClaudeHooksPlan.hooksDestinationPath, allowedRoots);
     fs.mkdirSync(path.dirname(resolvedClaudeHooksPlan.hooksDestinationPath), { recursive: true });
     fs.writeFileSync(
       resolvedClaudeHooksPlan.hooksDestinationPath,

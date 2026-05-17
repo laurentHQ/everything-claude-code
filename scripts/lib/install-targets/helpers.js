@@ -341,9 +341,30 @@ function createInstallTargetAdapter(config) {
 
       return defaultValidateAdapterInput(config, input);
     },
+    allowedRoots(scope, input = {}) {
+      if (typeof config.allowedRoots === 'function') {
+        const roots = config.allowedRoots(scope, input, adapter);
+        return Array.isArray(roots)
+          ? roots.filter(r => typeof r === 'string' && r.length > 0)
+          : [];
+      }
+      return [];
+    },
   };
 
   return Object.freeze(adapter);
+}
+
+// Allowed-roots are enforced at apply time only — see
+// scripts/lib/install/apply.js. Factory helpers (createManagedOperation,
+// createRemappedOperation, etc.) do not assert because adapter declarations
+// are opt-in and asserting inside the factories would break existing call
+// sites that construct operations with paths outside any allowedRoots.
+function getAllowedRoots(adapter, scope, input = {}) {
+  if (!adapter || typeof adapter.allowedRoots !== 'function') {
+    return [];
+  }
+  return adapter.allowedRoots(scope, input);
 }
 
 module.exports = {
@@ -362,6 +383,7 @@ module.exports = {
   ),
   createNamespacedFlatRuleOperations,
   createRemappedOperation,
+  getAllowedRoots,
   isForeignPlatformPath,
   normalizeRelativePath,
 };

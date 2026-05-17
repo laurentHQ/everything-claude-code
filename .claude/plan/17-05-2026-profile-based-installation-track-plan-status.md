@@ -37,8 +37,8 @@
 
 | Wave | Tracks | Status | Commit(s) |
 |---|---|---|---|
-| 1 | T1 | pending | — |
-| 2 | T3a | pending | — |
+| 1 | T1 | **done** | `ddf803f1` |
+| 2 | T3a | **done** | (pending) |
 | 3 | T2 + T3b-min | pending | — |
 | 4 | T5 | pending | — |
 | 5 | T4 | pending | — |
@@ -47,15 +47,15 @@
 
 | Wave | Tier T (tests) | Tier W (wiring) | Tier B (behavioral) | Tier S (simplification) | Commit(s) |
 |---|---|---|---|---|---|
-| 1 | — | — | — | — | — |
-| 2 | — | — | — | — | — |
+| 1 | 2501/2501 ✓ | CI validator runs semantic checks; `getProfileSettings` exported; `resolveInstallPlan` surfaces `profileSettings`; `listInstallProfiles` passes through `settings`+`targets` | Schema rejects unknown `settings` keys; semantic checker emits `mcp-not-allowed`-style error msgs for each of the 3 rules; `getProfileSettings` clone-isolated | Two `cloneJsonValue` helpers now exist (`apply.js` + `install-manifests.js`); centralize in T2 | `ddf803f1` |
+| 2 | 2514/2514 ✓ (+13) | `assertInsideAllowedRoot` called pre-write in `apply.js` for both per-op loop and resolved-claude-hooks final write; `getAllowedRoots` exported; adapter contract gains `allowedRoots(scope, input)` defaulting to `[]` (opt-in — no adapter declares yet, so no-op for existing flows) | symlink escape rejected, traversal `..` rejected, absolute-path escape rejected, empty allowedRoots is no-op, exact-match + nested + future-paths-with-missing-intermediates all pass; integration test in `tests/integration/path-safety.test.js` exercises apply.js | apply.js stayed minimal — 1 hoisted lookup + 2 assertion call sites; no factory helpers were touched (intentional; documented in `helpers.js` comment) | (pending) |
 | 3 | — | — | — | — | — |
 | 4 | — | — | — | — | — |
 | 5 | — | — | — | — | — |
 
 ## Tech-debt items (deferred to v1, logged from Tier S)
 
-_(none yet)_
+- (Wave 1) Two `cloneJsonValue` helpers (one in `scripts/lib/install/apply.js`, one new in `scripts/lib/install-manifests.js`). T2 should consolidate when it creates `scripts/lib/install/plan-operations.js`.
 
 ## Open follow-ups
 
