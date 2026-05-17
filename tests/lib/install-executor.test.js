@@ -399,6 +399,44 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('applyInstallPlan self-enforcing gate refuses on severity:error policy conflict', () => {
+    // PR #3 review C2 regression guard. The executor's gate must fire when
+    // a plan-construction caller forgets to invoke the CLI gate first.
+    // Construct a plan that would trigger Rule 3 (block_global_install:true
+    // + scope:user) and verify applyInstallPlan throws BEFORE any side
+    // effect — no operations applied, no install-state written.
+    const sourceRoot = createTempDir('install-executor-source-');
+    const homeDir = createTempDir('install-executor-home-');
+    try {
+      writeManifestSourceFixture(sourceRoot);
+      const plan = createManifestInstallPlan({
+        sourceRoot,
+        homeDir,
+        target: 'claude',
+        profileId: 'minimal',
+        scope: 'user',
+      });
+      // Synthetically toggle the profile setting on the in-memory plan so
+      // the rule fires (the fixture profile likely doesn't carry
+      // block_global_install). Verifies the gate logic, not the fixture.
+      plan.profileSettings = { ...(plan.profileSettings || {}), block_global_install: true };
+
+      assert.throws(
+        () => applyInstallPlan(plan),
+        /install refused|global-install-blocked/i,
+        'applyInstallPlan must refuse when policy returns severity:error'
+      );
+      // No state file written, no destination created.
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'ecc', 'install-state.json')),
+        'install-state must NOT be written when policy refuses');
+      assert.ok(!fs.existsSync(path.join(homeDir, '.claude', 'src', 'app.js')),
+        'destination files must NOT be written when policy refuses');
+    } finally {
+      cleanup(sourceRoot);
+      cleanup(homeDir);
+    }
+  })) passed++; else failed++;
+
   if (test('applyInstallPlan re-export applies a manifest plan and writes install state', () => {
     const sourceRoot = createTempDir('install-executor-source-');
     const homeDir = createTempDir('install-executor-home-');

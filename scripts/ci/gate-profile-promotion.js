@@ -30,13 +30,16 @@ function gateSnapshotMatch() {
     : { gate: 'snapshot', status: 'fail', detail: r.stdout.split('\n').slice(-20).join('\n') };
 }
 
+const POLICY_GATE_SCOPES = ['user', 'project', 'sandbox'];
+
 function gatePolicyClean() {
-  // For each promoted profile, build the default plan and assert no
-  // severity:"error" conflicts. We piggyback on the snapshot test which
-  // already does plan-document construction across the matrix; if any
-  // promoted profile would refuse a default install, snapshot regeneration
-  // would have failed. As a direct check, also exercise evaluatePolicy
-  // against each profile with default settings.
+  // For each promoted profile, exercise evaluatePolicy across the full
+  // (target x scope) matrix and assert no severity:"error" conflicts.
+  //
+  // This is the canonical direct check. The snapshot matrix is an independent
+  // corroborator but does NOT exercise scope-based policy rules (R3
+  // block_global_install) because snapshot generation runs with scope:null.
+  // Iterating scopes here is what catches scope-sensitive regressions.
   const { resolveInstallPlan, loadInstallManifests } = require(path.join(REPO_ROOT, 'scripts/lib/install-manifests'));
   const { evaluatePolicy } = require(path.join(REPO_ROOT, 'scripts/lib/install/policy'));
   const manifests = loadInstallManifests();
@@ -45,21 +48,29 @@ function gatePolicyClean() {
     const settings = (profile.settings) || {};
     if (settings.lifecycle !== 'promoted') continue;
     for (const target of (Array.isArray(profile.targets) ? profile.targets : ['claude'])) {
-      try {
-        const resolved = resolveInstallPlan({ profileId, target });
-        const { conflicts } = evaluatePolicy(resolved, resolved.profileSettings || null);
-        const blocking = conflicts.filter(c => c && c.severity === 'error');
-        if (blocking.length > 0) {
-          failures.push({ profileId, target, conflicts: blocking.map(c => c.reason) });
+      for (const scope of POLICY_GATE_SCOPES) {
+        try {
+          const resolved = resolveInstallPlan({ profileId, target, scope });
+          const { conflicts } = evaluatePolicy(resolved, resolved.profileSettings || null);
+          const blocking = conflicts.filter(c => c && c.severity === 'error');
+          if (blocking.length > 0) {
+            failures.push({ profileId, target, scope, conflicts: blocking.map(c => c.reason) });
+          }
+        } catch (error) {
+          failures.push({ profileId, target, scope, error: error.message });
         }
-      } catch (error) {
-        failures.push({ profileId, target, error: error.message });
       }
     }
   }
-  return failures.length === 0
-    ? { gate: 'policy', status: 'pass' }
-    : { gate: 'policy', status: 'fail', detail: JSON.stringify(failures) };
+  if (failures.length === 0) {
+    return { gate: 'policy', status: 'pass' };
+  }
+  // Surface the full failure list on stderr (the runner truncates `detail`
+  // to its first line, so this is the only way to see all blocking conflicts).
+  for (const f of failures) {
+    process.stderr.write(`[gate:policy] ${f.profileId} x ${f.target} x scope:${f.scope} -> ${f.error || (f.conflicts || []).join(',')}\n`);
+  }
+  return { gate: 'policy', status: 'fail', detail: JSON.stringify(failures) };
 }
 
 function gateSecretScan() {

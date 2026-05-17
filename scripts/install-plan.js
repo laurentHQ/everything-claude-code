@@ -45,10 +45,13 @@ Options:
                       Exclude a user-facing install component
   --config <path>     Load install intent from ecc-install.json
   --target <target>   Filter plan for a specific target
+  --scope <scope>     Plan against a scope: project | user | sandbox (default: derived from profile settings or null)
   --json              Emit machine-readable JSON
   --help              Show this help text
 `);
 }
+
+const SUPPORTED_PLAN_SCOPES = ['project', 'user', 'sandbox'];
 
 function parseArgs(argv) {
   const args = argv.slice(2);
@@ -61,6 +64,7 @@ function parseArgs(argv) {
     excludeComponentIds: [],
     configPath: null,
     target: null,
+    scope: null,
     family: null,
     listProfiles: false,
     listModules: false,
@@ -114,6 +118,13 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === '--target') {
       parsed.target = args[index + 1] || null;
+      index += 1;
+    } else if (arg === '--scope') {
+      const value = args[index + 1] || null;
+      if (value !== null && !SUPPORTED_PLAN_SCOPES.includes(value)) {
+        throw new Error(`Unsupported scope: ${value}. Expected one of: ${SUPPORTED_PLAN_SCOPES.join(', ')}`);
+      }
+      parsed.scope = value;
       index += 1;
     } else {
       throw new Error(`Unknown argument: ${arg}`);
@@ -258,12 +269,14 @@ function main() {
       languages: [],
       config,
     });
+    const requestScope = options.scope || request.scope || null;
     const plan = resolveInstallPlan({
       profileId: request.profileId,
       moduleIds: request.moduleIds,
       includeComponentIds: request.includeComponentIds,
       excludeComponentIds: request.excludeComponentIds,
       target: request.target,
+      scope: requestScope,
     });
 
     if (options.json) {
@@ -285,7 +298,7 @@ function main() {
           adapter = null;
         }
         const planDoc = buildPlanDocument(plan, adapter, {
-          scope: null,
+          scope: requestScope,
           planningInput: {
             repoRoot,
             projectRoot: process.cwd(),

@@ -14,6 +14,7 @@ function createInstallPlanFromRequest(request, options = {}) {
   if (request.mode === 'manifest') {
     return createManifestInstallPlan({
       target: request.target,
+      scope: request.scope || null,
       profileId: request.profileId,
       moduleIds: request.moduleIds,
       includeComponentIds: request.includeComponentIds,

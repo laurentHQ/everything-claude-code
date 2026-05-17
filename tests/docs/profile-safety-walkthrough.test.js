@@ -217,6 +217,33 @@ function runTests() {
     }
   })) passed++; else failed++;
 
+  if (test('SELECTIVE-INSTALL-ARCHITECTURE.md gate list matches gate-profile-promotion.js runGates output', () => {
+    const archDocPath = path.join(REPO_ROOT, 'docs/SELECTIVE-INSTALL-ARCHITECTURE.md');
+    const archDoc = fs.readFileSync(archDocPath, 'utf8');
+    // Find the gate-list sentence: "sequences five gates in order: `schema`, `snapshot`, `policy`, `secret-scan`, `round-trip`"
+    const gateListRe = /sequences\s+(?:five|FIVE|\d+)\s+gates?\s+in\s+order:\s*([^.]+?)\./i;
+    const match = archDoc.match(gateListRe);
+    assert.ok(match, 'expected SELECTIVE-INSTALL-ARCHITECTURE.md to contain a "sequences <N> gates in order: ..." sentence');
+    const documentedGates = (match[1].match(/`([^`]+)`/g) || []).map(s => s.replace(/`/g, ''));
+    assert.ok(documentedGates.length > 0, 'gate list sentence must enumerate gate names in backticks');
+
+    // Compare against actual gate names emitted by runGates. Use stubs so
+    // the test does not invoke real sub-gates (which would be slow + flaky).
+    const { runGates } = require(path.join(REPO_ROOT, 'scripts/ci/gate-profile-promotion.js'));
+    const stubs = {};
+    for (const gate of documentedGates) {
+      stubs[gate] = () => ({ gate, status: 'pass' });
+    }
+    const report = runGates({ reportPath: null, stubs });
+    const actualGates = report.gates.map(g => g.gate);
+
+    assert.deepStrictEqual(
+      [...documentedGates].sort(),
+      [...actualGates].sort(),
+      `documented gates do not match runGates output. doc: ${documentedGates.join(',')} | actual: ${actualGates.join(',')}`
+    );
+  })) passed++; else failed++;
+
   if (test('Neither doc contains <filename>.<ext>:<lineno> line-number rot', () => {
     const rotRe = /[a-zA-Z_-]+\.(?:js|json|md):\d+/g;
     const limMatches = limitations.match(rotRe) || [];

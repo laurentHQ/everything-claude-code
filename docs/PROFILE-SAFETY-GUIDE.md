@@ -48,7 +48,7 @@ without source edits.
 | `mcp-not-allowed` | Profile has `allow_mcp:false` (or you requested a server outside `allowed_mcp_servers`). | Switch to a profile that allows MCP, OR remove the offending `--with mcp:*` flag, OR add the server to `allowed_mcp_servers` if the profile owner agrees. |
 | `global-install-blocked` | Profile has `block_global_install:true` and you used `--scope user`. | Re-run with `--scope project` or `--scope sandbox`. |
 | `hook-risk-high` | Profile has `hook_profile:"validation"` and a selected hooks module is classified `riskLevel:"high"`. | Use a profile without the validation gate, OR ask the hook module author to downgrade `riskLevel` if appropriate. |
-| `outside-allowed-root` | A destination resolves outside the adapter's `allowedRoots`. | Check `--home`, `--project-root`, `--target-root` flags; almost always indicates a misconfigured scope or a symlink escape. |
+| `outside-allowed-root` | A destination resolves outside the adapter's `allowedRoots`. | Check the `HOME` env var and the `--scope` flag (the adapter derives its allowed roots from those). A symlink anywhere in the destination path that resolves outside the allowed-root tree also fires this conflict. |
 | `file-exists` / `unmanaged-file` / `profile-conflict` | (Reserved for future cycles; not yet emitted by the planner in v1.) | n/a |
 
 ## Drift triage (`ecc doctor`)

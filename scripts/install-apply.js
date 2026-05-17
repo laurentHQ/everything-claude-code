@@ -46,9 +46,16 @@ Options:
   --without <component>
                       Exclude a user-facing install component
   --config <path>     Load install intent from ecc-install.json
+  --scope <scope>     Install scope: project | user | sandbox
+                      (consumed by policy gates; profiles with
+                      block_global_install:true refuse --scope user)
   --dry-run    Show the install plan without copying files
   --json       Emit machine-readable plan/result JSON
   --help       Show this help text
+
+Exit codes:
+  0  install completed (or dry-run printed)
+  1  install refused or runtime error (e.g., policy conflict, schema invalid, IO error)
 
 Available languages:
 ${languages.map(language => `  - ${language}`).join('\n')}
