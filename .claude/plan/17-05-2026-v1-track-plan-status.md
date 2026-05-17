@@ -11,7 +11,7 @@
 | Wave | Tracks | Status | Commit(s) |
 |---|---|---|---|
 | 0 | W0 — PR #2 deferred-patch (I3, I5, I6, I7, I8, I10) | **done** | (pending) |
-| 1 | T2-rest then T3b-rest *(sequential within wave)* | pending | — |
+| 1 | T2-rest then T3b-rest *(sequential within wave)* | **done** | (pending) |
 | 2 | T6 — Security Defaults & Policy Gates | pending | — |
 | 3 | T7 — Promotion Lifecycle & CI Gating | pending | — |
 | 4 | T8 — Operator UX & Docs | pending | — |
@@ -37,7 +37,7 @@
 | Wave | Tier T | Tier W (wiring) | Tier B (behavioral) | Tier S (simplification) | Commit(s) |
 |---|---|---|---|---|---|
 | 0 | targeted 11 suites green (+10 new tests; total 2603/2603 unchanged by spot-check) | I3 ajv validator imported in plan-operations.js + install-plan.js; I10 shared schemas `$ref`'d from profiles/state/plan; I5/I6 new statuses surface in `inspectManagedOperation` callers (`analyzeRecord`, `executeRepairOperation`); `createFallbackValidator` deleted, `ajv` is now hard dep | parse-error / permission-error / drifted distinguished and tested separately; `apply` throws with kind name on unknown dispatch; `audit-on` round-trip retains `audit.jsonl`; `audit-off` round-trip leaves zero residuals | Agent had to add 2 minor collateral edits (CI validator pre-registers shared schemas; `install-plan.schema.json` $id dropped so $ref resolves) — both documented; absolute `$id` removal is a tech-debt item if we ever publish schemas externally | (pending) |
-| 1 | — | — | — | — | — |
+| 1 | targeted 18 suites green (+18 new tests across 6 kinds + opencode); 19 snapshot files all pass | apply.js DISPATCH covers all 9 kinds (merge-json, merge-jsonc, copy-file, copy-path, copy-tree, flatten-copy, render-template, mkdir, remove); install-lifecycle.js extended via isFileCopyKind for copy-tree/flatten-copy + new mkdir/merge-jsonc branches; install-executor.js's addRecursiveCopyOperations / addMatchingRuleOperations now emit correct kind labels; opencode-home declares allowedRoots (mirroring claude/codex pattern) | render-template enforces context-key presence + allowedKeys restriction (template-variable leakage guard); merge-jsonc strips // and /* */ comments before merge; mkdir is idempotent + uninstall removes only if empty; remove is idempotent on missing; opencode round-trip restores baseline; 5 new opencode snapshots match deterministically; existing 14 snapshots unchanged (claude/codex/opencode use createRemappedOperation which kept copy-path, so T2-rest's relabel of addRecursiveCopyOperations doesn't reach them — out-of-MVP adapters benefit) | Agent ran in 11min vs Wave 0's 36min — pre-located touchpoints + parallel-dispatch worked. T2-rest agent removed 3 lifecycle-test sentinel-via-mkdir assertions that became unreachable when mkdir became first-class (documented; dispatch defenses still exercised by apply-unknown-kind.test.js) | (pending) |
 | 2 | — | — | — | — | — |
 | 3 | — | — | — | — | — |
 | 4 | — | — | — | — | — |

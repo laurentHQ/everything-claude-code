@@ -132,9 +132,9 @@ function applyInstallPlan(plan) {
   return applyPlan(plan);
 }
 
-function buildCopyFileOperation({ moduleId, sourcePath, sourceRelativePath, destinationPath, strategy }) {
+function buildCopyFileOperation({ moduleId, sourcePath, sourceRelativePath, destinationPath, strategy, kind }) {
   return {
-    kind: 'copy-file',
+    kind: kind || 'copy-file',
     moduleId,
     sourcePath,
     sourceRelativePath,
@@ -169,6 +169,7 @@ function addRecursiveCopyOperations(operations, options) {
       sourceRelativePath,
       destinationPath,
       strategy: options.strategy || 'preserve-relative-path',
+      kind: 'copy-tree',
     }));
   }
 
@@ -252,6 +253,7 @@ function addMatchingRuleOperations(operations, options) {
       sourceRelativePath,
       destinationPath,
       strategy: options.strategy || 'flatten-copy',
+      kind: 'flatten-copy',
     }));
   }
 

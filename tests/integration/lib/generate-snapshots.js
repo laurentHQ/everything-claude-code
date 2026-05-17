@@ -11,12 +11,14 @@ const HOME_DIR = '/FIXTURE-HOME';
 const PROJECT_ROOT = '/FIXTURE-PROJECT';
 
 const MATRIX = [
-  // 5 general profiles x {claude, codex}
-  ['minimal', 'claude'], ['minimal', 'codex'],
-  ['core', 'claude'], ['core', 'codex'],
-  ['developer', 'claude'], ['developer', 'codex'],
-  ['security', 'claude'], ['security', 'codex'],
-  ['research', 'claude'], ['research', 'codex'],
+  // 5 general profiles x {claude, codex, opencode}
+  // opencode joined the snapshot-locked set in V1 (T3b-rest).
+  // document-ai and enterprise x opencode remain deferred to v1.1.
+  ['minimal', 'claude'], ['minimal', 'codex'], ['minimal', 'opencode'],
+  ['core', 'claude'], ['core', 'codex'], ['core', 'opencode'],
+  ['developer', 'claude'], ['developer', 'codex'], ['developer', 'opencode'],
+  ['security', 'claude'], ['security', 'codex'], ['security', 'opencode'],
+  ['research', 'claude'], ['research', 'codex'], ['research', 'opencode'],
   // document-ai x {claude, codex}
   ['document-ai', 'claude'], ['document-ai', 'codex'],
   // enterprise x {claude, codex}

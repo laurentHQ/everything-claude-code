@@ -285,7 +285,12 @@ function deepRemoveJsonSubset(currentValue, managedValue) {
 }
 
 function isFileCopyKind(kind) {
-  return kind === 'copy-file' || kind === 'copy-path';
+  return (
+    kind === 'copy-file'
+    || kind === 'copy-path'
+    || kind === 'copy-tree'
+    || kind === 'flatten-copy'
+  );
 }
 
 function hydrateRecordedOperations(repoRoot, operations) {
@@ -341,7 +346,7 @@ function executeRepairOperation(repoRoot, operation) {
     return;
   }
 
-  if (operation.kind === 'merge-json') {
+  if (operation.kind === 'merge-json' || operation.kind === 'merge-jsonc') {
     const payload = getOperationJsonPayload(operation);
     if (payload === undefined) {
       throw new Error(`Missing merge payload for repair: ${operation.destinationPath}`);
@@ -354,6 +359,11 @@ function executeRepairOperation(repoRoot, operation) {
 
     ensureParentDir(operation.destinationPath);
     fs.writeFileSync(operation.destinationPath, formatJson(mergedValue));
+    return;
+  }
+
+  if (operation.kind === 'mkdir') {
+    fs.mkdirSync(operation.destinationPath, { recursive: true });
     return;
   }
 
@@ -420,7 +430,7 @@ function executeUninstallOperation(operation) {
     };
   }
 
-  if (operation.kind === 'merge-json') {
+  if (operation.kind === 'merge-json' || operation.kind === 'merge-jsonc') {
     const previousContent = getOperationPreviousContent(operation);
     if (previousContent !== null) {
       ensureParentDir(operation.destinationPath);
@@ -465,6 +475,24 @@ function executeUninstallOperation(operation) {
 
     ensureParentDir(operation.destinationPath);
     fs.writeFileSync(operation.destinationPath, formatJson(nextValue));
+    return {
+      removedPaths: [],
+      cleanupTargets: [],
+    };
+  }
+
+  if (operation.kind === 'mkdir') {
+    if (fs.existsSync(operation.destinationPath)) {
+      try {
+        fs.rmdirSync(operation.destinationPath);
+        return {
+          removedPaths: [operation.destinationPath],
+          cleanupTargets: [],
+        };
+      } catch (_e) {
+        // Directory not empty — leave it alone (do not destroy user content).
+      }
+    }
     return {
       removedPaths: [],
       cleanupTargets: [],
@@ -524,6 +552,12 @@ function inspectManagedOperation(repoRoot, operation) {
       operation,
       destinationPath,
     };
+  }
+
+  if (operation.kind === 'mkdir') {
+    return fs.existsSync(destinationPath)
+      ? { status: 'ok', operation, destinationPath }
+      : { status: 'missing', operation, destinationPath };
   }
 
   if (!fs.existsSync(destinationPath)) {
@@ -587,7 +621,7 @@ function inspectManagedOperation(repoRoot, operation) {
     };
   }
 
-  if (operation.kind === 'merge-json') {
+  if (operation.kind === 'merge-json' || operation.kind === 'merge-jsonc') {
     const payload = getOperationJsonPayload(operation);
     if (payload === undefined) {
       return {
