@@ -29,6 +29,8 @@ function createInstallPlanFromRequest(request, options = {}) {
     return createLegacyCompatInstallPlan({
       target: request.target,
       legacyLanguages: request.legacyLanguages,
+      includeComponentIds: request.includeComponentIds,
+      excludeComponentIds: request.excludeComponentIds,
       projectRoot: options.projectRoot,
       homeDir: options.homeDir,
       claudeRulesDir: options.claudeRulesDir,
