@@ -14,7 +14,10 @@ SANDBOX_MODE="worktree-only"
 # ---------- identity ----------
 
 SANDBOX_PROJECT_NAME="ecc-sandbox"
-SANDBOX_DIR_SUFFIX=".sandbox"
+# NOTE: ".sandbox" is reserved for the long-lived worktree that holds `main`
+# (used for the upstream-sync routine). Plan-execution sandboxes use a
+# different suffix so they don't collide with that worktree's path.
+SANDBOX_DIR_SUFFIX=".sandbox-impl"
 
 # Branch the worktree off this ref. Defaults to "main" upstream; this repo
 # wants the current feature branch as the base so plan files are present.
