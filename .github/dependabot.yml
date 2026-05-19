@@ -1,0 +1,4 @@
+# Tombstone: kept so upstream edits auto-resolve via merge=ours.
+# This fork does not run Dependabot updates.
+version: 2
+updates: []

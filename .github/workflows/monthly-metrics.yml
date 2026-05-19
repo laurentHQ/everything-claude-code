@@ -1,0 +1,9 @@
+name: monthly-metrics (disabled on fork)
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Tombstone: kept so upstream edits auto-resolve via merge=ours."

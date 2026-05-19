@@ -1,0 +1,14 @@
+# Fork-local tombstones: prefer "ours" over upstream edits so scheduled
+# / publishing workflows that we've neutralized cannot drift back.
+#
+# Requires the local merge driver:  git config merge.ours.driver true
+# (Document this in the clone/setup instructions; .git/config is not committed.)
+
+.github/dependabot.yml                  merge=ours
+.github/workflows/maintenance.yml       merge=ours
+.github/workflows/monthly-metrics.yml   merge=ours
+.github/workflows/release.yml           merge=ours
+.github/workflows/reusable-release.yml  merge=ours
+.github/workflows/reusable-test.yml     merge=ours
+.github/workflows/reusable-validate.yml merge=ours
+.github/workflows/supply-chain-watch.yml merge=ours

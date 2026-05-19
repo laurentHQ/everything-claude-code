@@ -1,0 +1,9 @@
+name: reusable-validate (disabled on fork)
+on:
+  workflow_call:
+permissions: {}
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Tombstone reusable: never called from fork's slim ci.yml."
