@@ -17,7 +17,11 @@ This is a **Claude Code plugin** - a collection of production-ready agents, skil
 
 ## Running Tests
 
+Run target tests first for feature implement, do not run all tests to valide new feature
+
 ```bash
+
+
 # Run all tests
 node tests/run-all.js
 
